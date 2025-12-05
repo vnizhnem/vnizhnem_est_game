@@ -1,5 +1,5 @@
 // ====================
-// НИЖЕГОРОДСКАЯ КОЗА (СТАБИЛЬНАЯ ВЕРСИЯ)
+// КОЗА В НИЖНЕМ - ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ====================
 
 // Получаем canvas и context
@@ -21,7 +21,7 @@ GROUND_IMG.src = 'ground.png';
 
 // Игровые переменные
 let score = 0;
-let highScore = localStorage.getItem('flappyHighScore') || 0;
+let highScore = parseInt(localStorage.getItem('goatHighScore')) || 0;
 let gameOver = false;
 let gameStarted = false;
 let frames = 0;
@@ -82,6 +82,13 @@ const ground = {
 };
 
 // ====================
+// ОБНОВЛЕНИЕ РЕКОРДА
+// ====================
+function updateHighScoreDisplay() {
+    document.getElementById('highScore').textContent = highScore;
+}
+
+// ====================
 // УПРАВЛЕНИЕ
 // ====================
 function handleJump(e) {
@@ -102,6 +109,9 @@ document.addEventListener('keydown', function(e) {
         handleJump(e);
     }
 });
+
+document.addEventListener('touchstart', handleJump, { passive: false });
+document.addEventListener('click', handleJump);
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', resetGame);
@@ -270,7 +280,8 @@ function endGame() {
     
     if (score > highScore) {
         highScore = score;
-        localStorage.setItem('flappyHighScore', highScore);
+        localStorage.setItem('goatHighScore', highScore);
+        updateHighScoreDisplay();
     }
     
     document.getElementById('finalScore').textContent = score;
@@ -331,20 +342,24 @@ function gameLoop() {
 }
 
 window.onload = function() {
+    // Telegram Web App
     if (window.Telegram && Telegram.WebApp) {
         const tg = Telegram.WebApp;
         tg.expand();
         tg.isVerticalSwipesEnabled = false;
-        document.addEventListener('touchstart', handleJump, { passive: false });
-        document.addEventListener('click', handleJump);
     }
     
+    // Запуск игры
     gameLoop();
     
+    // Загрузка изображений
     [BIRD_IMG, PIPE_IMG, BG_IMG, GROUND_IMG].forEach(img => {
         img.onload = () => console.log('Изображение загружено');
         img.onerror = () => console.error('Ошибка загрузки:', img.src);
     });
     
     PELMEN_IMG.onload = () => console.log('Пельмень загружен');
+    
+    // Показываем рекорд при загрузке
+    updateHighScoreDisplay();
 };
