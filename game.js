@@ -1,5 +1,5 @@
 // ====================
-// КОЗА В НИЖНЕМ - С ЛЕВЕЛАМИ!
+// КОЗА В НИЖНЕМ - С ЛЕВЕЛАМИ И ОТЛОЖЕННЫМ СТАРТОМ!
 // ====================
 
 // Telegram Web App Detection
@@ -134,7 +134,7 @@ ENEMY_BIRD_IMG.src = 'data:image/svg+xml;base64,' + btoa(`
 `);
 
 // ====================
-// НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ УРОВНЕЙ
+// НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ УРОВНЕЙ И ОТЛОЖЕННОГО СТАРТА
 // ====================
 
 // Игровые переменные
@@ -147,8 +147,13 @@ let frames = 0;
 // Система уровней
 let currentLevel = 1;
 let speedMultiplier = 1.0;
-let levelUpEffect = 0; // Для анимации перехода уровня
+let levelUpEffect = 0;
 let nextLevelAt = 200; // Первый уровень на 200 очках
+
+// Отложенный старт
+let countdown = 0; // 0 = нет отсчета, 3..2..1..GO!
+let countdownTimer = 0;
+let isCountdownActive = false;
 
 // Коза
 const goat = {
@@ -212,32 +217,76 @@ function getCurrentSpeed() {
 
 function getBirdSpawnChance() {
     // Увеличиваем шанс появления птиц с уровнем
-    return ENEMY_BIRD.baseSpawnChance + (currentLevel - 1) * 0.05;
+    return ENEMY_BIRD.baseSpawnChance + (currentLevel - 1) * 0.07;
 }
 
 function getBirdSpeed() {
     // Увеличиваем скорость птиц с уровнем
-    return ENEMY_BIRD.baseSpeed * (1 + (currentLevel - 1) * 0.1);
+    return ENEMY_BIRD.baseSpeed * (1 + (currentLevel - 1) * 0.15);
 }
 
 function updateLevel() {
     // Проверяем, достигли ли нового уровня
     if (score >= nextLevelAt) {
         currentLevel++;
-        speedMultiplier = 1.0 + (currentLevel - 1) * 0.15; // +15% скорости за уровень
+        speedMultiplier = 1.0 + (currentLevel - 1) * 0.2; // +20% скорости за уровень (было 15%)
         
-        // Устанавливаем следующий порог (каждый следующий уровень требует +50 очков)
+        // Устанавливаем следующий порог (каждый следующий уровень требует +150 очков)
         nextLevelAt = 200 + (currentLevel - 1) * 150;
         
         // Запускаем эффект перехода уровня
-        levelUpEffect = 60; // 60 кадров анимации (2 секунды при 30fps)
+        levelUpEffect = 90; // 90 кадров анимации (3 секунды при 30fps)
         
         // Вибрация при переходе уровня в Telegram
         if (isTelegram && navigator.vibrate) {
-            navigator.vibrate([100, 50, 100, 50, 100]);
+            navigator.vibrate([150, 80, 150, 80, 150]);
         }
         
         console.log(`🎮 Уровень ${currentLevel}! Скорость: x${speedMultiplier.toFixed(2)}`);
+    }
+}
+
+// ====================
+// ОТЛОЖЕННЫЙ СТАРТ
+// ====================
+
+function startCountdown() {
+    countdown = 4; // 3..2..1..GO! (4 шага)
+    countdownTimer = 0;
+    isCountdownActive = true;
+    
+    // Останавливаем гравитацию козы на время отсчета
+    goat.velocity = 0;
+    goat.y = canvas.height / 2;
+    
+    console.log('Отсчет начат: 3...');
+}
+
+function updateCountdown() {
+    if (!isCountdownActive) return;
+    
+    countdownTimer++;
+    
+    // Меняем число каждые 60 кадров (2 секунды)
+    if (countdownTimer >= 60) {
+        countdown--;
+        countdownTimer = 0;
+        
+        // Вибрация при смене цифры в Telegram
+        if (isTelegram && navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+        
+        if (countdown === 0) {
+            // Старт!
+            isCountdownActive = false;
+            console.log('СТАРТ!');
+            
+            // Вибрация при старте в Telegram
+            if (isTelegram && navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+        }
     }
 }
 
@@ -322,14 +371,14 @@ function openTelegramChannel() {
 function handleJump() {
     if (!gameStarted) {
         startGame();
-    } else if (!gameOver) {
+    } else if (!gameOver && !isCountdownActive) {
         goat.velocity = goat.jumpStrength;
         
         // Vibrate on jump in Telegram
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate(50);
         }
-    } else {
+    } else if (gameOver) {
         resetGame();
     }
 }
@@ -468,8 +517,8 @@ function startGame() {
         tg.MainButton.show();
     }
     
-    // Добавляем первую лавочку
-    addBench();
+    // Запускаем отсчет
+    startCountdown();
     
     // Запускаем игровой цикл
     gameLoop();
@@ -483,6 +532,7 @@ function resetGame() {
     speedMultiplier = 1.0;
     levelUpEffect = 0;
     nextLevelAt = 200;
+    isCountdownActive = false;
     
     benches.length = 0;
     pelmeni.length = 0;
@@ -552,6 +602,12 @@ function update() {
     if (!gameStarted || gameOver) return;
     
     frames++;
+    
+    // Обновляем отсчет если активен
+    if (isCountdownActive) {
+        updateCountdown();
+        return; // Не обновляем игру пока идет отсчет
+    }
     
     // Обновляем уровень
     updateLevel();
@@ -682,7 +738,7 @@ function update() {
     }
     
     // Добавление объектов с учетом уровня
-    const spawnInterval = Math.max(80, 120 - (currentLevel - 1) * 10); // Чаще на высоких уровнях
+    const spawnInterval = Math.max(70, 110 - (currentLevel - 1) * 8); // Чаще на высоких уровнях
     
     if (frames % spawnInterval === 0) {
         addBench();
@@ -691,7 +747,7 @@ function update() {
     }
     
     // Дополнительный шанс появления птиц (чаще на высоких уровнях)
-    if (frames % Math.max(60, 80 - (currentLevel - 1) * 5) === 0 && Math.random() < 0.25) {
+    if (frames % Math.max(50, 70 - (currentLevel - 1) * 4) === 0 && Math.random() < 0.3) {
         addEnemyBird();
     }
 }
@@ -720,14 +776,16 @@ function endGame() {
     document.getElementById('gameOverScreen').style.display = 'flex';
     
     // Добавляем информацию об уровне в экран проигрыша
-    const levelInfo = document.createElement('div');
-    levelInfo.className = 'level-info';
-    levelInfo.innerHTML = `<p style="color:#FFD700; font-size:20px; margin-top:10px;">🏆 Достигнут уровень: ${currentLevel}</p>`;
-    
     const gameOverScreen = document.getElementById('gameOverScreen');
-    const finalScores = document.querySelector('.final-scores');
-    if (finalScores && !gameOverScreen.querySelector('.level-info')) {
-        finalScores.after(levelInfo);
+    if (gameOverScreen && !gameOverScreen.querySelector('.level-info')) {
+        const levelInfo = document.createElement('div');
+        levelInfo.className = 'level-info';
+        levelInfo.innerHTML = `<p style="color:#FFD700; font-size:20px; margin-top:10px;">🏆 Достигнут уровень: ${currentLevel}</p>`;
+        
+        const finalScores = gameOverScreen.querySelector('.final-scores');
+        if (finalScores) {
+            finalScores.after(levelInfo);
+        }
     }
     
     // Vibrate on game over
@@ -752,7 +810,7 @@ function draw() {
     // Фон с эффектом уровня (мигание при переходе)
     if (levelUpEffect > 0 && levelUpEffect % 10 < 5) {
         // Мигающий фон при переходе уровня
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.15)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
@@ -836,52 +894,118 @@ function draw() {
     
     ctx.restore();
     
-    // Отображение уровня и скорости
+    // ====================
+    // ОТОБРАЖЕНИЕ ИНФОРМАЦИИ ОБ УРОВНЕ (ПРАВЫЙ ВЕРХНИЙ УГОЛ)
+    // ====================
+    
+    // Фон для информации об уровне
+    const infoX = canvas.width - 220;
+    const infoY = 10;
+    const infoWidth = 210;
+    const infoHeight = 90;
+    
+    // Полупрозрачный черный фон
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, canvas.height - 40, 180, 35);
+    ctx.fillRect(infoX, infoY, infoWidth, infoHeight);
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(infoX, infoY, infoWidth, infoHeight);
     
+    // Текущий уровень
     ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 16px Arial';
+    ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Уровень: ${currentLevel}`, 20, canvas.height - 25);
+    ctx.fillText(`Уровень: ${currentLevel}`, infoX + 10, infoY + 25);
     
+    // Множитель скорости
     ctx.fillStyle = '#00FF00';
-    ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, 20, canvas.height - 10);
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, infoX + 10, infoY + 50);
+    
+    // Прогресс до следующего уровня
+    if (score < nextLevelAt) {
+        const progress = (score % 200) / 200;
+        const progressWidth = 190;
+        const progressHeight = 12;
+        const progressY = infoY + 70;
+        
+        // Фон прогресс-бара
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(infoX + 10, progressY, progressWidth, progressHeight);
+        
+        // Заполнение прогресс-бара
+        ctx.fillStyle = '#FF8C00';
+        ctx.fillRect(infoX + 10, progressY, progressWidth * progress, progressHeight);
+        
+        // Очки до следующего уровня
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+            `${nextLevelAt - score} до след. уровня`,
+            infoX + infoWidth / 2,
+            progressY + 22
+        );
+    } else {
+        // Максимальный уровень достигнут
+        ctx.fillStyle = '#FF0000';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+            'МАКСИМАЛЬНЫЙ УРОВЕНЬ!',
+            infoX + infoWidth / 2,
+            infoY + 75
+        );
+    }
+    
+    // ====================
+    // ОТОБРАЖЕНИЕ ОТСЧЕТА ПЕРЕД СТАРТОМ
+    // ====================
+    if (isCountdownActive && countdown > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Большие цифры отсчета
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 120px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        let countdownText;
+        if (countdown === 4) countdownText = '3';
+        else if (countdown === 3) countdownText = '2';
+        else if (countdown === 2) countdownText = '1';
+        else if (countdown === 1) countdownText = 'GO!';
+        
+        // Пульсирующая анимация
+        const pulse = Math.sin(frames * 0.2) * 0.2 + 1;
+        ctx.font = `bold ${120 * pulse}px Arial`;
+        
+        ctx.fillText(countdownText, canvas.width / 2, canvas.height / 2);
+        
+        // Подсказка под цифрой
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Готовься!', canvas.width / 2, canvas.height / 2 + 100);
+        
+        ctx.restore();
+    }
     
     // Эффект перехода уровня
     if (levelUpEffect > 0) {
         ctx.save();
         ctx.globalAlpha = Math.min(1, levelUpEffect / 30);
         ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 32px Arial';
+        ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`🚀 УРОВЕНЬ ${currentLevel}!`, canvas.width / 2, canvas.height / 2);
+        ctx.fillText(`🚀 УРОВЕНЬ ${currentLevel}!`, canvas.width / 2, canvas.height / 3);
         
-        ctx.font = 'bold 20px Arial';
-        ctx.fillText(`Скорость +15%`, canvas.width / 2, canvas.height / 2 + 40);
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(`Скорость +20%`, canvas.width / 2, canvas.height / 3 + 50);
         ctx.restore();
-    }
-    
-    // Прогресс до следующего уровня
-    if (score > 0 && score < nextLevelAt) {
-        const progressWidth = 200;
-        const progress = (score % 200) / 200;
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(canvas.width - progressWidth - 10, canvas.height - 30, progressWidth, 15);
-        
-        ctx.fillStyle = '#FF8C00';
-        ctx.fillRect(canvas.width - progressWidth - 10, canvas.height - 30, progressWidth * progress, 15);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-            `След. уровень: ${nextLevelAt - score} очков`,
-            canvas.width - progressWidth/2 - 10,
-            canvas.height - 20
-        );
     }
 }
 
@@ -920,9 +1044,10 @@ window.addEventListener('load', function() {
         tg.MainButton.show();
     }
     
-    console.log('Game loaded successfully with LEVEL SYSTEM!');
+    console.log('Game loaded with DELAYED START and LEVEL SYSTEM!');
     console.log('Telegram mode:', isTelegram ? 'ON' : 'OFF');
-    console.log('Level system: +15% speed every 200 points');
+    console.log('Level system: +20% speed every 200 points');
+    console.log('Delayed start: 3...2...1...GO! (2 seconds each)');
 });
 
 // Export functions for Telegram
