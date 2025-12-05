@@ -1,12 +1,11 @@
 // ====================
-// КОЗА В НИЖНЕМ - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// КОЗА В НИЖНЕМ - РАННЕР ВЕРСИЯ!
 // ====================
 
-// Получаем canvas и context
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// Загружаем изображения
+// Изображения
 const BIRD_IMG = new Image();
 BIRD_IMG.src = 'bird.png';
 
@@ -19,99 +18,136 @@ BG_IMG.src = 'background.png';
 const GROUND_IMG = new Image();
 GROUND_IMG.src = 'ground.png';
 
+// Пельмени
+const PELMEN_IMG = new Image();
+PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60">
+    <ellipse cx="50" cy="30" rx="45" ry="25" fill="#f8f8f8" stroke="#d4a574" stroke-width="3"/>
+    <ellipse cx="35" cy="20" rx="8" ry="4" fill="rgba(255,255,255,0.6)"/>
+</svg>
+`);
+
+// Отравленные пельмени (красные)
+const BAD_PELMEN_IMG = new Image();
+BAD_PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60">
+    <ellipse cx="50" cy="30" rx="45" ry="25" fill="#ff6b6b" stroke="#d32f2f" stroke-width="3"/>
+    <ellipse cx="35" cy="20" rx="8" ry="4" fill="rgba(255,255,255,0.6)"/>
+</svg>
+`);
+
 // Игровые переменные
 let score = 0;
 let highScore = parseInt(localStorage.getItem('goatHighScore')) || 0;
 let gameOver = false;
 let gameStarted = false;
 let frames = 0;
+let lastJumpTime = 0;
+let isSuperJump = false;
 
-// Позиция козы
+// КОЗА (бежит по земле)
 const goat = {
-    x: 150,
-    y: canvas.height / 2,
-    width: 50,
-    height: 50,
-    velocity: 0,
-    gravity: 0.5,
-    jumpStrength: -10,
+    x: 100,
+    y: canvas.height - 100, // Бежит по земле
+    width: 60,
+    height: 60,
+    velocityY: 0,
+    gravity: 1.2,
+    jumpPower: -18,
+    superJumpPower: -28,
     rotation: 0,
-    maxJumpHeight: 200,
-    isAtCeiling: false
+    isJumping: false,
+    groundY: canvas.height - 100
 };
 
-// Массив лавочек
-const pipes = [];
-const pelmeni = [];
-
-// Настройки
-const PIPE = {
+// ЛАВОЧКИ (на земле)
+const benches = [];
+const BENCH = {
     width: 100,
     height: 60,
-    gap: 200,
-    speed: 3,
-    minY: 400,
-    maxY: 500
+    gap: 250,
+    speed: 5
 };
 
+// ПЕЛЬМЕНИ (летают)
+const pelmeni = [];
 const PELMEN = {
-    width: 40,
-    height: 25,
-    points: 15,
-    spawnChance: 0.7
+    width: 35,
+    height: 20,
+    goodPoints: 15,
+    badPoints: -10,
+    spawnChance: 0.6,
+    goodHeight: 250,   // Высота обычных пельменей
+    badHeight: 350     // Высота отравленных (выше)
 };
 
-// Пельмень
-const PELMEN_IMG = new Image();
-PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60">
-    <ellipse cx="50" cy="30" rx="45" ry="25" fill="#f8f8f8" stroke="#d4a574" stroke-width="3"/>
-    <ellipse cx="50" cy="30" rx="35" ry="18" fill="none" stroke="#e6c9a8" stroke-width="1.5" stroke-dasharray="5,3"/>
-    <path d="M15,30 Q25,15 35,30 Q45,45 55,30 Q65,15 75,30 Q85,45 85,30" 
-          fill="none" stroke="#b08d57" stroke-width="2" stroke-linecap="round"/>
-    <ellipse cx="35" cy="20" rx="8" ry="4" fill="rgba(255,255,255,0.6)"/>
-</svg>
-`);
-
-// Земля
+// ЗЕМЛЯ
 const ground = {
     x: 0,
     y: canvas.height - 50,
     height: 50,
-    speed: 3
+    speed: 5
 };
 
 // ====================
-// ОБНОВЛЕНИЕ РЕКОРДА
+// УПРАВЛЕНИЕ С ДВОЙНЫМ ТАПОМ
 // ====================
-function updateHighScoreDisplay() {
-    document.getElementById('highScore').textContent = highScore;
-}
+let tapCount = 0;
+let tapTimeout;
 
-// ====================
-// УПРАВЛЕНИЕ
-// ====================
-function handleJump(e) {
+function handleTap(e) {
     if (e.type === 'touchstart') e.preventDefault();
     
-    if (!gameStarted) {
-        startGame();
-    } else if (!gameOver) {
-        goat.velocity = goat.jumpStrength;
-    } else {
-        resetGame();
+    tapCount++;
+    
+    if (tapCount === 1) {
+        tapTimeout = setTimeout(() => {
+            // Одинарный тап
+            if (!gameStarted) {
+                startGame();
+            } else if (!gameOver) {
+                performJump(false);
+            } else {
+                resetGame();
+            }
+            tapCount = 0;
+        }, 250);
+    } else if (tapCount === 2) {
+        clearTimeout(tapTimeout);
+        // Двойной тап - супер-прыжок!
+        if (gameStarted && !gameOver) {
+            performJump(true);
+        }
+        tapCount = 0;
     }
 }
 
+function performJump(isSuper) {
+    if (goat.isJumping) return;
+    
+    goat.isJumping = true;
+    isSuperJump = isSuper;
+    goat.velocityY = isSuper ? goat.superJumpPower : goat.jumpPower;
+    lastJumpTime = Date.now();
+}
+
+// Обработчики
+document.addEventListener('touchstart', handleTap, { passive: false });
+document.addEventListener('click', handleTap);
+
+// Клавиатура (пробел)
 document.addEventListener('keydown', function(e) {
     if (e.code === 'Space') {
         e.preventDefault();
-        handleJump(e);
+        if (!gameStarted) {
+            startGame();
+        } else if (!gameOver) {
+            performJump(e.repeat); // Зажатый пробел = супер-прыжок?
+        } else {
+            resetGame();
+        }
     }
 });
-
-document.addEventListener('touchstart', handleJump, { passive: false });
-document.addEventListener('click', handleJump);
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', resetGame);
@@ -125,68 +161,73 @@ function startGame() {
     gameStarted = true;
     gameOver = false;
     score = 0;
-    pipes.length = 0;
+    benches.length = 0;
     pelmeni.length = 0;
-    goat.y = canvas.height / 2;
-    goat.velocity = 0;
-    goat.isAtCeiling = false;
+    goat.y = goat.groundY;
+    goat.velocityY = 0;
+    goat.isJumping = false;
+    isSuperJump = false;
     
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('score').textContent = '0';
     
-    addPipe();
+    addBench();
+    addPelmen();
 }
 
 function resetGame() {
     gameOver = false;
     gameStarted = false;
     score = 0;
-    pipes.length = 0;
+    benches.length = 0;
     pelmeni.length = 0;
-    goat.y = canvas.height / 2;
-    goat.velocity = 0;
-    goat.isAtCeiling = false;
+    goat.y = goat.groundY;
+    goat.velocityY = 0;
+    goat.isJumping = false;
+    isSuperJump = false;
     
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
     document.getElementById('score').textContent = '0';
 }
 
-function addPipe() {
-    const y = Math.random() * (PIPE.maxY - PIPE.minY) + PIPE.minY;
-    const newPipe = {
+function addBench() {
+    benches.push({
         x: canvas.width,
-        y: y,
-        width: PIPE.width,
-        height: PIPE.height,
+        y: ground.y - BENCH.height,
+        width: BENCH.width,
+        height: BENCH.height,
         passed: false
-    };
-    
-    pipes.push(newPipe);
-    
-    if (Math.random() < PELMEN.spawnChance) {
-        addPelmen(newPipe.x, newPipe.y);
-    }
+    });
 }
 
-function addPelmen(pipeX, pipeY) {
-    const minY = pipeY - 80;
-    const maxY = goat.maxJumpHeight + 80;
-    const pelmenY = Math.random() * (maxY - minY) + minY;
-    const offset = Math.random() > 0.5 ? -40 : 40;
+function addPelmen() {
+    // Обычный пельмень (хороший)
+    if (Math.random() < PELMEN.spawnChance) {
+        pelmeni.push({
+            x: canvas.width + Math.random() * 100,
+            y: canvas.height - PELMEN.goodHeight,
+            width: PELMEN.width,
+            height: PELMEN.height,
+            isGood: true,
+            collected: false,
+            float: Math.random() * Math.PI * 2
+        });
+    }
     
-    pelmeni.push({
-        x: pipeX + PIPE.width / 2 - PELMEN.width / 2 + offset,
-        y: pelmenY,
-        width: PELMEN.width,
-        height: PELMEN.height,
-        collected: false,
-        float: Math.random() * Math.PI * 2,
-        speed: 0.5 + Math.random() * 0.5,
-        side: offset > 0 ? 'right' : 'left',
-        scale: 0.8 + Math.random() * 0.4
-    });
+    // Отравленный пельмень (плохой) - реже
+    if (Math.random() < 0.3) {
+        pelmeni.push({
+            x: canvas.width + Math.random() * 100,
+            y: canvas.height - PELMEN.badHeight,
+            width: PELMEN.width,
+            height: PELMEN.height,
+            isGood: false,
+            collected: false,
+            float: Math.random() * Math.PI * 2
+        });
+    }
 }
 
 function update() {
@@ -194,85 +235,100 @@ function update() {
     
     frames++;
     
-    goat.velocity += goat.gravity;
-    goat.y += goat.velocity;
+    // ФИЗИКА КОЗЫ
+    goat.velocityY += goat.gravity;
+    goat.y += goat.velocityY;
     
-    goat.rotation = goat.velocity * 0.1;
-    if (goat.rotation > 0.5) goat.rotation = 0.5;
-    if (goat.rotation < -0.5) goat.rotation = -0.5;
-    
-    if (goat.y < goat.maxJumpHeight) {
-        goat.y = goat.maxJumpHeight;
-        goat.velocity = 0;
-        goat.isAtCeiling = true;
+    // Вращение для сальто
+    if (isSuperJump) {
+        goat.rotation += 0.3;
+        if (goat.rotation > Math.PI * 2) goat.rotation = 0;
     } else {
-        goat.isAtCeiling = false;
+        goat.rotation = goat.velocityY * 0.05;
     }
     
+    // Приземление
+    if (goat.y >= goat.groundY) {
+        goat.y = goat.groundY;
+        goat.velocityY = 0;
+        goat.isJumping = false;
+        isSuperJump = false;
+        goat.rotation = 0;
+    }
+    
+    // Движение земли
     ground.x -= ground.speed;
     if (ground.x <= -canvas.width) ground.x = 0;
     
-    // Лавочки
-    for (let i = pipes.length - 1; i >= 0; i--) {
-        const pipe = pipes[i];
-        pipe.x -= PIPE.speed;
+    // ЛАВОЧКИ
+    for (let i = benches.length - 1; i >= 0; i--) {
+        const bench = benches[i];
+        bench.x -= BENCH.speed;
         
-        if (!pipe.passed && pipe.x + pipe.width < goat.x) {
-            pipe.passed = true;
-            score++;
+        // Прохождение
+        if (!bench.passed && bench.x + bench.width < goat.x) {
+            bench.passed = true;
+            score += 5;
             document.getElementById('score').textContent = score;
-            if (pipes.length < 3) addPipe();
+            
+            if (benches.length < 4) addBench();
         }
         
-        if (pipe.x + pipe.width < 0) pipes.splice(i, 1);
+        // Удаление
+        if (bench.x + bench.width < 0) benches.splice(i, 1);
         
-        if (goat.x + goat.width > pipe.x &&
-            goat.x < pipe.x + pipe.width &&
-            goat.y + goat.height > pipe.y &&
-            goat.y < pipe.y + pipe.height) {
+        // КОЛЛИЗИЯ С ЛАВОЧКОЙ
+        if (goat.x + goat.width - 20 > bench.x &&
+            goat.x + 20 < bench.x + bench.width &&
+            goat.y + goat.height > bench.y &&
+            goat.y < bench.y + bench.height) {
             gameOver = true;
             endGame();
         }
     }
     
-    // Пельмени
+    // ПЕЛЬМЕНИ
     for (let i = pelmeni.length - 1; i >= 0; i--) {
         const pelmen = pelmeni[i];
-        if (pelmen.collected) continue;
+        pelmen.x -= BENCH.speed;
+        pelmen.float += 0.05;
         
-        pelmen.float += pelmen.speed * 0.05;
-        pelmen.y += Math.sin(pelmen.float) * 0.8;
-        if (pelmen.side === 'left') pelmen.x -= 0.3;
-        else pelmen.x += 0.3;
-        pelmen.x -= PIPE.speed;
-        
-        if (goat.x + goat.width - 15 > pelmen.x &&
+        // Коллизия с пельменем
+        if (!pelmen.collected &&
+            goat.x + goat.width - 15 > pelmen.x &&
             goat.x + 15 < pelmen.x + pelmen.width &&
             goat.y + goat.height - 15 > pelmen.y &&
             goat.y + 15 < pelmen.y + pelmen.height) {
+            
             pelmen.collected = true;
-            score += PELMEN.points;
+            
+            if (pelmen.isGood) {
+                score += PELMEN.goodPoints;
+                // Эффект сбора
+                pelmen.collectTime = Date.now();
+            } else {
+                score += PELMEN.badPoints;
+                if (score < 0) score = 0;
+                pelmen.collectTime = Date.now();
+            }
+            
             document.getElementById('score').textContent = score;
             
-            pelmen.collectTime = Date.now();
             setTimeout(() => {
                 const index = pelmeni.indexOf(pelmen);
                 if (index > -1) pelmeni.splice(index, 1);
-            }, 250);
+            }, 300);
         }
         
-        if (pelmen.x + pelmen.width < -50 || pelmen.x > canvas.width + 50) {
+        // Удаление
+        if (pelmen.x + pelmen.width < -50) {
             pelmeni.splice(i, 1);
         }
     }
     
-    if (goat.y + goat.height > ground.y) {
-        goat.y = ground.y - goat.height;
-        gameOver = true;
-        endGame();
-    }
-    
-    if (frames % 120 === 0) addPipe();
+    // Автоматическое добавление
+    if (frames % 100 === 0) addBench();
+    if (frames % 80 === 0) addPelmen();
 }
 
 function endGame() {
@@ -281,7 +337,6 @@ function endGame() {
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('goatHighScore', highScore);
-        updateHighScoreDisplay();
     }
     
     document.getElementById('finalScore').textContent = score;
@@ -293,43 +348,95 @@ function endGame() {
 // ОТРИСОВКА
 // ====================
 function draw() {
+    // Фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
     
-    if (gameStarted && !gameOver) {
-        ctx.strokeStyle = 'rgba(255, 50, 50, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.moveTo(0, goat.maxJumpHeight);
-        ctx.lineTo(canvas.width, goat.maxJumpHeight);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
+    // Земля
+    ctx.drawImage(GROUND_IMG, ground.x, ground.y, canvas.width, ground.height);
+    ctx.drawImage(GROUND_IMG, ground.x + canvas.width, ground.y, canvas.width, ground.height);
     
-    pipes.forEach(pipe => {
-        ctx.drawImage(PIPE_IMG, pipe.x, pipe.y, pipe.width, pipe.height);
+    // Лавочки
+    benches.forEach(bench => {
+        ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
     });
     
+    // Пельмени
     pelmeni.forEach(pelmen => {
         if (!pelmen.collected) {
             ctx.save();
             ctx.translate(pelmen.x + pelmen.width/2, pelmen.y + pelmen.height/2);
-            ctx.rotate(pelmen.float * 0.3);
-            const pulse = 1 + Math.sin(pelmen.float * 2) * 0.1;
-            ctx.scale(pelmen.scale * pulse, pelmen.scale * pulse);
-            ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+            ctx.rotate(pelmen.float * 0.5);
+            
+            if (pelmen.isGood) {
+                ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+            } else {
+                ctx.drawImage(BAD_PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+            }
+            
             ctx.restore();
+        } else {
+            // Анимация сбора
+            const timeSinceCollect = Date.now() - (pelmen.collectTime || 0);
+            if (timeSinceCollect < 300) {
+                const progress = timeSinceCollect / 300;
+                const opacity = 1 - progress;
+                const scale = 1 + progress;
+                const yOffset = -progress * 30;
+                
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.translate(pelmen.x + pelmen.width/2, pelmen.y + pelmen.height/2 + yOffset);
+                ctx.scale(scale, scale);
+                
+                if (pelmen.isGood) {
+                    ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+                    
+                    // Текст +15
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('+15', 0, -40);
+                } else {
+                    ctx.drawImage(BAD_PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+                    
+                    // Текст -10
+                    ctx.fillStyle = '#ff4444';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('-10', 0, -40);
+                }
+                
+                ctx.restore();
+            }
         }
     });
     
-    ctx.drawImage(GROUND_IMG, ground.x, ground.y, canvas.width, ground.height);
-    ctx.drawImage(GROUND_IMG, ground.x + canvas.width, ground.y, canvas.width, ground.height);
-    
+    // КОЗА
     ctx.save();
-    ctx.translate(goat.x + goat.width / 2, goat.y + goat.height / 2);
+    ctx.translate(goat.x + goat.width/2, goat.y + goat.height/2);
     ctx.rotate(goat.rotation);
-    ctx.drawImage(BIRD_IMG, -goat.width / 2, -goat.height / 2, goat.width, goat.height);
+    
+    // Если супер-прыжок - добавляем эффект
+    if (isSuperJump) {
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 20;
+    }
+    
+    ctx.drawImage(BIRD_IMG, -goat.width/2, -goat.height/2, goat.width, goat.height);
     ctx.restore();
+    
+    // Индикатор супер-прыжка
+    if (gameStarted && !gameOver && goat.isJumping && isSuperJump) {
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(goat.x + goat.width/2, goat.y + goat.height/2, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('СУПЕР-ПРЫЖОК!', goat.x + goat.width/2, goat.y - 20);
+    }
 }
 
 // ====================
@@ -342,24 +449,22 @@ function gameLoop() {
 }
 
 window.onload = function() {
-    // Telegram Web App
+    // Telegram
     if (window.Telegram && Telegram.WebApp) {
         const tg = Telegram.WebApp;
         tg.expand();
         tg.isVerticalSwipesEnabled = false;
     }
     
-    // Запуск игры
+    // Запуск
     gameLoop();
     
     // Загрузка изображений
-    [BIRD_IMG, PIPE_IMG, BG_IMG, GROUND_IMG].forEach(img => {
+    [BIRD_IMG, PIPE_IMG, BG_IMG, GROUND_IMG, PELMEN_IMG, BAD_PELMEN_IMG].forEach(img => {
         img.onload = () => console.log('Изображение загружено');
-        img.onerror = () => console.error('Ошибка загрузки:', img.src);
+        img.onerror = () => console.error('Ошибка:', img.src);
     });
     
-    PELMEN_IMG.onload = () => console.log('Пельмень загружен');
-    
-    // Показываем рекорд при загрузке
-    updateHighScoreDisplay();
+    // Рекорд
+    document.getElementById('highScore').textContent = highScore;
 };

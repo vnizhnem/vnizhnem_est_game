@@ -13,37 +13,63 @@ body {
     color: white;
     min-height: 100vh;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-}
-
-.container {
-    width: 100%;
-    height: 100vh;
-    display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 10px;
+    margin: 0;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* ОТДЕЛЬНАЯ КЛИКАБЕЛЬНАЯ ССЫЛКА */
+.channel-link-container {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.channel-link-button {
+    display: inline-block;
+    background: linear-gradient(145deg, #0088cc, #00aaff);
+    color: white !important;
+    text-decoration: none !important;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: bold;
+    border: 3px solid #00ccff;
+    box-shadow: 0 5px 15px rgba(0, 136, 204, 0.4);
+    transition: all 0.3s;
+}
+
+.channel-link-button:hover {
+    transform: scale(1.05);
+    background: linear-gradient(145deg, #00aaff, #0088cc);
+    box-shadow: 0 8px 20px rgba(0, 136, 204, 0.6);
+}
+
+.channel-link-button strong {
+    color: #ffff00 !important;
 }
 
 #game {
     position: relative;
     width: 100%;
-    height: 80vh;
-    max-width: 800px;
+    height: 75vh;
     max-height: 600px;
-    margin: 0 auto;
     border-radius: 25px;
     overflow: hidden;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
     border: 6px solid #ff8c00;
     background: #1e3a8a;
-    display: flex;
-    flex-direction: column;
 }
 
 #canvas {
@@ -51,7 +77,6 @@ body {
     width: 100%;
     height: 100%;
     background: transparent;
-    flex: 1;
 }
 
 #score {
@@ -83,7 +108,6 @@ body {
     align-items: center;
     z-index: 200;
     padding: 30px 20px;
-    border: 6px solid #ff8c00;
     border-radius: 25px;
     text-align: center;
     overflow-y: auto;
@@ -100,35 +124,44 @@ h1, h2 {
     text-shadow: 3px 3px 0 #000;
     font-size: 28px;
     line-height: 1.3;
-    padding: 0 10px;
 }
 
-h1 {
-    font-size: 32px;
-    margin-bottom: 25px;
+/* ИНФОРМАЦИЯ ОБ УПРАВЛЕНИИ */
+.controls-info {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 15px;
+    margin: 20px 0;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
 }
 
-h2 {
-    font-size: 30px;
-    margin-bottom: 30px;
-}
-
-p {
-    margin: 12px 0;
-    font-size: 18px;
-    line-height: 1.5;
-    max-width: 90%;
-    color: #e2e8f0;
-}
-
-/* Контейнер для кнопок */
-.game-buttons {
+.control-item {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    margin: 12px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.key {
+    font-weight: bold;
+    color: #FFD700;
+    font-size: 16px;
+}
+
+.desc {
+    color: #e2e8f0;
+    font-size: 16px;
+}
+
+.game-buttons {
     margin: 25px 0;
     width: 100%;
-    align-items: center;
+    display: flex;
     justify-content: center;
 }
 
@@ -144,26 +177,15 @@ button {
     transition: all 0.2s;
     box-shadow: 0 8px 20px rgba(255, 107, 0, 0.4);
     border: 4px solid #FFD700;
-    width: 100%;
-    max-width: 350px;
+    min-width: 300px;
     min-height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    letter-spacing: 1px;
 }
 
 button:hover, button:active {
     transform: scale(1.05);
     background: linear-gradient(145deg, #FF8C00, #FF6B00);
-    box-shadow: 0 10px 25px rgba(255, 107, 0, 0.6);
 }
 
-button:active {
-    transform: scale(0.98);
-}
-
-/* Отображение счета */
 .score-display {
     background: rgba(0, 0, 0, 0.4);
     padding: 25px;
@@ -187,47 +209,23 @@ button:active {
     font-weight: bold;
 }
 
-.current-score span, .record-score span {
-    font-size: 28px;
-    font-family: 'Press Start 2P', cursive;
-}
-
 .hint {
     font-size: 16px;
     color: #90CAF9;
-    margin-top: 25px;
+    margin-top: 20px;
     font-style: italic;
     background: rgba(0, 0, 0, 0.2);
     padding: 12px 20px;
     border-radius: 10px;
-    border-left: 4px solid #FFD700;
-}
-
-.controls-hint {
-    margin-top: 20px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    border: 2px dashed rgba(255, 215, 0, 0.3);
-}
-
-.controls-hint p {
-    font-size: 16px;
-    margin: 0;
-    color: #cbd5e1;
-}
-
-.controls-hint strong {
-    color: #FFD700;
 }
 
 .footer {
-    margin-top: 20px;
+    margin-top: 15px;
     padding: 15px;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 15px;
     width: 100%;
-    max-width: 800px;
+    text-align: center;
     border: 2px solid rgba(255, 140, 0, 0.3);
 }
 
@@ -237,237 +235,46 @@ button:active {
     color: #cbd5e1;
 }
 
-/* Стили для ссылки на канал */
-.channel-link {
-    color: #FFD700 !important;
-    text-decoration: none !important;
-    transition: all 0.3s !important;
-    padding: 3px 10px !important;
-    border-radius: 8px !important;
-    display: inline-block !important;
-    background: rgba(255, 215, 0, 0.1) !important;
-}
-
-.channel-link:hover {
-    color: #ffffff !important;
-    background: rgba(255, 215, 0, 0.3) !important;
-    text-decoration: none !important;
-}
-
-.channel-link strong {
-    color: inherit !important;
-}
-
-/* ========================================== */
-/* АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ */
-/* ========================================== */
+/* МОБИЛЬНАЯ АДАПТАЦИЯ */
 @media (max-width: 768px) {
     .container {
         padding: 5px;
-        height: 100vh;
-        justify-content: space-between;
-    }
-    
-    #game {
-        height: 75vh;
-        max-height: none;
-        width: 100%;
-        border-radius: 20px;
-        border-width: 5px;
-        flex: 1;
-        margin: 10px 0;
-    }
-    
-    #canvas {
-        height: 100%;
-    }
-    
-    h1 {
-        font-size: 24px !important;
-        margin-bottom: 15px !important;
-        padding: 0 5px;
-    }
-    
-    h2 {
-        font-size: 22px !important;
-        margin-bottom: 20px !important;
-    }
-    
-    p {
-        font-size: 16px !important;
-        line-height: 1.4 !important;
-        margin: 10px 0 !important;
-        max-width: 95% !important;
-    }
-    
-    #score {
-        font-size: 28px !important;
-        top: 10px !important;
-        left: 10px !important;
-        padding: 4px 12px !important;
-    }
-    
-    #startScreen, #gameOverScreen {
-        padding: 25px 15px !important;
-        border-width: 5px !important;
-        border-radius: 20px !important;
-        justify-content: center !important;
-    }
-    
-    button {
-        padding: 18px 35px !important;
-        font-size: 20px !important;
-        max-width: 300px !important;
-        min-height: 65px !important;
-        border-width: 3px !important;
-        border-radius: 50px !important;
-    }
-    
-    .game-buttons {
-        gap: 15px !important;
-        margin: 20px 0 !important;
-    }
-    
-    .score-display {
-        padding: 20px !important;
-        margin: 20px 0 !important;
-        width: 95% !important;
-    }
-    
-    .current-score {
-        font-size: 20px !important;
-    }
-    
-    .record-score {
-        font-size: 19px !important;
-    }
-    
-    .current-score span, .record-score span {
-        font-size: 24px !important;
-    }
-    
-    .hint {
-        font-size: 15px !important;
-        margin-top: 20px !important;
-        padding: 10px 15px !important;
-    }
-    
-    .controls-hint {
-        padding: 12px !important;
-        margin-top: 15px !important;
-    }
-    
-    .controls-hint p {
-        font-size: 15px !important;
-    }
-    
-    .footer {
-        padding: 12px !important;
-        margin-top: 15px !important;
-        margin-bottom: 10px !important;
-        width: 100% !important;
-    }
-    
-    .footer p {
-        font-size: 14px !important;
-    }
-}
-
-/* iPhone и маленькие телефоны */
-@media (max-width: 375px) {
-    h1 {
-        font-size: 20px !important;
-    }
-    
-    h2 {
-        font-size: 19px !important;
-    }
-    
-    p {
-        font-size: 15px !important;
-    }
-    
-    button {
-        padding: 16px 30px !important;
-        font-size: 18px !important;
-        max-width: 280px !important;
-        min-height: 60px !important;
+        gap: 10px;
     }
     
     #game {
         height: 70vh;
+        border-width: 4px;
     }
     
-    #score {
-        font-size: 24px !important;
-    }
-    
-    .current-score span, .record-score span {
-        font-size: 22px !important;
-    }
-}
-
-/* Горизонтальная ориентация */
-@media (max-height: 500px) and (orientation: landscape) {
-    .container {
-        flex-direction: row;
-        padding: 5px;
-    }
-    
-    #game {
-        height: 95vh;
-        width: 70vw;
-        margin-right: 10px;
-    }
-    
-    .footer {
-        width: 25vw;
-        margin: 0;
-        height: 95vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-    
-    #startScreen, #gameOverScreen {
-        padding: 15px !important;
+    .channel-link-button {
+        padding: 10px 20px;
+        font-size: 14px;
     }
     
     h1, h2 {
-        font-size: 18px !important;
-        margin-bottom: 10px !important;
+        font-size: 22px !important;
     }
     
-    p {
-        font-size: 14px !important;
-        margin: 6px 0 !important;
+    .controls-info {
+        padding: 15px;
+        margin: 15px 0;
     }
     
-    button {
-        padding: 12px 25px !important;
-        font-size: 16px !important;
-        min-height: 50px !important;
-    }
-    
-    .game-buttons {
-        gap: 10px !important;
-        margin: 15px 0 !important;
-    }
-}
-
-/* Большие экраны */
-@media (min-width: 1200px) {
-    #game {
-        max-width: 900px;
-        max-height: 675px;
-    }
-    
-    h1 {
-        font-size: 36px;
+    .control-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 5px;
     }
     
     button {
-        font-size: 26px;
-        padding: 22px 55px;
+        padding: 16px 35px;
+        font-size: 20px;
+        min-width: 250px;
+        min-height: 60px;
+    }
+    
+    #score {
+        font-size: 28px !important;
     }
 }
