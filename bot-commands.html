@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Команды бота</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a1538, #1a1a5e);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .command-btn {
+            display: block;
+            width: 90%;
+            max-width: 400px;
+            background: linear-gradient(145deg, #FF6B00, #FF8C00);
+            color: white;
+            padding: 25px;
+            font-size: 22px;
+            border-radius: 15px;
+            text-decoration: none;
+            margin: 15px;
+            border: 5px solid #FFD700;
+            font-weight: bold;
+        }
+        
+        .channel-btn {
+            background: linear-gradient(145deg, #0088cc, #00aaff);
+            border-color: #00ccff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐐 Коза в Нижнем</h1>
+    <p>Выберите действие:</p>
+    
+    <a href="https://t.me/vnizhnem_game_bot?startapp=game" class="command-btn">
+        🎮 /start - Открыть игру
+    </a>
+    
+    <a href="https://t.me/vnizhnem_est" class="command-btn channel-btn">
+        📢 /channel - Наш канал
+    </a>
+    
+    <p style="margin-top: 30px; color: #ccc;">
+        Скопируйте эту ссылку в описание бота:<br>
+        <code style="background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px;">
+        https://vnizhnem.github.io/vnizhnem_est_game/bot-commands.html
+        </code>
+    </p>
+    
+    <script>
+        // Если открыли в Telegram - добавляем кнопку "Назад"
+        if (window.Telegram && Telegram.WebApp) {
+            const tg = Telegram.WebApp;
+            tg.MainButton.setText('🔙 Назад');
+            tg.MainButton.onClick(() => tg.close());
+            tg.MainButton.show();
+        }
+    </script>
+</body>
+</html>
