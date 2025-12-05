@@ -9,58 +9,63 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #0d1b3e, #2d1b69);
+    background: linear-gradient(135deg, #0a1538, #1a1a5e);
     color: white;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 10px;
+    padding: 15px;
 }
 
 .container {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 20px;
 }
 
-/* ССЫЛКА НА КАНАЛ */
-.channel-link {
-    display: inline-block;
+/* ССЫЛКА НА ТЕЛЕГРАМ - КРУПНАЯ */
+.telegram-link {
+    display: block;
     background: linear-gradient(145deg, #0088cc, #00aaff);
     color: white !important;
     text-decoration: none !important;
-    padding: 10px 20px;
-    border-radius: 50px;
-    font-size: 14px;
+    padding: 18px 35px;
+    border-radius: 60px;
+    font-size: 22px;
     font-weight: bold;
-    border: 2px solid #00ccff;
+    border: 4px solid #00ccff;
     text-align: center;
     transition: all 0.2s;
+    box-shadow: 0 8px 25px rgba(0, 136, 204, 0.5);
+    width: 100%;
+    max-width: 500px;
 }
 
-.channel-link:hover {
+.telegram-link:hover {
     transform: scale(1.03);
     background: linear-gradient(145deg, #00aaff, #0088cc);
+    box-shadow: 0 10px 30px rgba(0, 136, 204, 0.7);
 }
 
-.channel-link strong {
+.telegram-link strong {
     color: #ffff00 !important;
 }
 
-/* ИГРА */
+/* ИГРА - БОЛЬШАЯ */
 #game {
     position: relative;
     width: 100%;
-    height: 70vh;
-    max-height: 550px;
-    border-radius: 20px;
+    height: 75vh;
+    min-height: 500px;
+    max-height: 700px;
+    border-radius: 30px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    border: 5px solid #ff8c00;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    border: 8px solid #ff8c00;
     background: #1e3a8a;
 }
 
@@ -71,19 +76,21 @@ body {
     background: transparent;
 }
 
+/* СЧЕТ - ОГРОМНЫЙ */
 #score {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    font-size: 32px;
+    top: 25px;
+    left: 25px;
+    font-size: 50px;
     font-weight: bold;
     color: #FFD700;
-    text-shadow: 2px 2px 0 #000;
+    text-shadow: 3px 3px 0 #000;
     font-family: 'Press Start 2P', cursive;
     z-index: 100;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 5px 12px;
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 12px 25px;
+    border-radius: 15px;
+    border: 4px solid #FFD700;
 }
 
 /* ЭКРАНЫ */
@@ -99,256 +106,393 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 200;
-    padding: 25px 20px;
+    padding: 40px 30px;
     text-align: center;
-    overflow-y: auto;
 }
 
 #gameOverScreen {
     background: linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(185, 28, 28, 0.95));
 }
 
+/* ЗАГОЛОВКИ - КРУПНЫЕ */
 h1, h2 {
     font-family: 'Press Start 2P', cursive;
     color: #FFD700;
-    margin-bottom: 15px;
-    text-shadow: 2px 2px 0 #000;
-    font-size: 24px;
-    line-height: 1.2;
+    margin-bottom: 30px;
+    text-shadow: 4px 4px 0 #000;
+    font-size: 42px;
+    line-height: 1.3;
+}
+
+h2 {
+    font-size: 38px;
+    margin-bottom: 40px;
 }
 
 .subtitle {
-    font-size: 16px !important;
+    font-size: 24px !important;
     color: #e2e8f0 !important;
-    margin-bottom: 25px !important;
+    margin-bottom: 40px !important;
+    line-height: 1.4 !important;
+    max-width: 90% !important;
 }
 
-/* УПРАВЛЕНИЕ */
-.controls {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 15px;
-    border-radius: 15px;
-    margin: 15px 0;
-    border: 2px solid rgba(255, 215, 0, 0.3);
+/* ИНСТРУКЦИИ ПРОСТЫЕ */
+.simple-instructions {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 25px;
+    border-radius: 20px;
+    margin: 30px 0;
+    border: 3px solid rgba(255, 215, 0, 0.3);
     width: 90%;
-    max-width: 400px;
+    max-width: 500px;
 }
 
-.control {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 10px 0;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
+.simple-instructions p {
+    font-size: 22px !important;
+    color: #FFD700 !important;
+    font-weight: bold;
+    margin: 0 !important;
 }
 
-.control .icon {
-    font-size: 20px;
-    min-width: 40px;
-}
-
-.control .text {
-    font-size: 14px;
-    color: #e2e8f0;
-    text-align: left;
-    flex: 1;
-}
-
-/* КНОПКИ */
+/* КНОПКИ - ОЧЕНЬ БОЛЬШИЕ */
 button {
     background: linear-gradient(145deg, #FF6B00, #FF8C00);
     color: white;
     border: none;
-    padding: 16px 35px;
-    font-size: 18px;
-    border-radius: 50px;
+    padding: 25px 60px;
+    font-size: 32px;
+    border-radius: 70px;
     cursor: pointer;
     font-family: 'Press Start 2P', cursive;
     transition: all 0.2s;
-    box-shadow: 0 6px 15px rgba(255, 107, 0, 0.4);
-    border: 3px solid #FFD700;
-    margin: 20px 0;
-    min-width: 250px;
-    min-height: 55px;
+    box-shadow: 0 10px 30px rgba(255, 107, 0, 0.5);
+    border: 6px solid #FFD700;
+    margin: 30px 0;
+    min-width: 350px;
+    min-height: 90px;
+    letter-spacing: 1px;
 }
 
 button:hover, button:active {
-    transform: scale(1.03);
+    transform: scale(1.04);
     background: linear-gradient(145deg, #FF8C00, #FF6B00);
+    box-shadow: 0 12px 35px rgba(255, 107, 0, 0.7);
 }
 
-/* СЧЕТ */
-.scores {
+/* РЕКОРДЫ */
+.high-score {
+    margin-top: 30px;
+    padding: 20px 35px;
     background: rgba(0, 0, 0, 0.4);
-    padding: 20px;
-    border-radius: 15px;
-    margin: 20px 0;
-    border: 2px solid rgba(255, 215, 0, 0.3);
-    width: 90%;
-    max-width: 350px;
+    border-radius: 20px;
+    border: 3px solid rgba(255, 215, 0, 0.4);
 }
 
-.score-item {
+.high-score p {
+    font-size: 24px !important;
+    color: #FFD700 !important;
+    font-family: 'Press Start 2P', cursive;
+    margin: 0 !important;
+}
+
+.high-score span {
+    color: #ffffff;
+    font-size: 28px;
+}
+
+/* ФИНАЛЬНЫЙ СЧЕТ */
+.final-scores {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 35px;
+    border-radius: 25px;
+    margin: 35px 0;
+    border: 4px solid rgba(255, 215, 0, 0.4);
+    width: 90%;
+    max-width: 500px;
+}
+
+.score-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 12px 0;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
+    margin: 20px 0;
+    padding: 18px 25px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 15px;
+    font-size: 24px;
 }
 
-.score-item .label {
-    font-size: 16px;
+.score-row span:first-child {
     color: #e2e8f0;
 }
 
-.score-item .value {
-    font-size: 22px;
+.score-value {
+    font-size: 32px;
     font-weight: bold;
     color: #FFD700;
     font-family: 'Press Start 2P', cursive;
 }
 
-/* ПОДСКАЗКИ */
-.hint {
-    font-size: 14px;
+/* СОВЕТ */
+.game-tip {
+    font-size: 20px;
     color: #90CAF9;
-    margin-top: 15px;
+    margin-top: 30px;
     font-style: italic;
-    padding: 10px 15px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
+    padding: 15px 25px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
     max-width: 90%;
 }
 
 /* ФУТЕР */
 .footer {
-    margin-top: 15px;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
+    margin-top: 25px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 20px;
     width: 100%;
     text-align: center;
-    border: 1px solid rgba(255, 140, 0, 0.3);
+    border: 3px solid rgba(255, 140, 0, 0.4);
 }
 
 .footer p {
-    margin: 6px 0;
-    font-size: 14px;
+    margin: 12px 0;
+    font-size: 18px;
     color: #cbd5e1;
 }
 
-.footer strong {
-    color: #FFD700;
+.footer-link {
+    color: #FFD700 !important;
+    text-decoration: none !important;
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    background: rgba(255, 215, 0, 0.15) !important;
 }
 
-/* АДАПТИВ */
+.footer-link:hover {
+    background: rgba(255, 215, 0, 0.3) !important;
+}
+
+.footer-link strong {
+    color: inherit !important;
+}
+
+/* ========================================== */
+/* МОБИЛЬНАЯ ВЕРСИЯ - ВСЁ ЕЩЕ КРУПНЕЕ! */
+/* ========================================== */
 @media (max-width: 768px) {
     body {
-        padding: 8px;
+        padding: 10px;
+        justify-content: flex-start;
+        padding-top: 20px;
     }
     
     .container {
-        gap: 10px;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    /* ИГРА ЗАНИМАЕТ БОЛЬШЕ МЕСТА */
+    #game {
+        height: 70vh;
+        min-height: 450px;
+        border-width: 6px;
+        border-radius: 25px;
+        width: 100%;
+    }
+    
+    /* ССЫЛКА ЕЩЕ КРУПНЕЕ */
+    .telegram-link {
+        padding: 16px 25px;
+        font-size: 20px;
+        border-width: 3px;
+        max-width: 95%;
+    }
+    
+    /* ЗАГОЛОВКИ КРУПНЕЕ */
+    h1 {
+        font-size: 32px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    h2 {
+        font-size: 28px !important;
+        margin-bottom: 30px !important;
+    }
+    
+    .subtitle {
+        font-size: 20px !important;
+        margin-bottom: 30px !important;
+    }
+    
+    /* СЧЕТ ОГРОМНЫЙ */
+    #score {
+        font-size: 42px !important;
+        top: 15px !important;
+        left: 15px !important;
+        padding: 10px 20px !important;
+        border-width: 3px !important;
+    }
+    
+    /* ЭКРАНЫ */
+    #startScreen, #gameOverScreen {
+        padding: 30px 20px !important;
+        justify-content: center !important;
+    }
+    
+    /* ИНСТРУКЦИИ */
+    .simple-instructions {
+        padding: 20px !important;
+        margin: 25px 0 !important;
+        width: 95% !important;
+    }
+    
+    .simple-instructions p {
+        font-size: 20px !important;
+    }
+    
+    /* КНОПКИ ОГРОМНЫЕ */
+    button {
+        padding: 22px 45px !important;
+        font-size: 28px !important;
+        min-width: 300px !important;
+        min-height: 80px !important;
+        border-width: 5px !important;
+        margin: 25px 0 !important;
+    }
+    
+    /* РЕКОРДЫ */
+    .high-score {
+        padding: 18px 25px !important;
+        margin-top: 25px !important;
+    }
+    
+    .high-score p {
+        font-size: 20px !important;
+    }
+    
+    .high-score span {
+        font-size: 24px !important;
+    }
+    
+    /* ФИНАЛЬНЫЙ СЧЕТ */
+    .final-scores {
+        padding: 25px !important;
+        margin: 30px 0 !important;
+        width: 95% !important;
+    }
+    
+    .score-row {
+        margin: 15px 0 !important;
+        padding: 15px 20px !important;
+        font-size: 20px !important;
+    }
+    
+    .score-value {
+        font-size: 26px !important;
+    }
+    
+    /* СОВЕТ */
+    .game-tip {
+        font-size: 18px !important;
+        margin-top: 25px !important;
+        padding: 12px 20px !important;
+    }
+    
+    /* ФУТЕР */
+    .footer {
+        padding: 18px !important;
+        margin-top: 20px !important;
+    }
+    
+    .footer p {
+        font-size: 16px !important;
+    }
+}
+
+/* ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ */
+@media (max-width: 375px) {
+    h1 {
+        font-size: 28px !important;
+    }
+    
+    h2 {
+        font-size: 24px !important;
+    }
+    
+    .subtitle {
+        font-size: 18px !important;
+    }
+    
+    button {
+        padding: 20px 35px !important;
+        font-size: 24px !important;
+        min-width: 280px !important;
+        min-height: 75px !important;
+    }
+    
+    #score {
+        font-size: 36px !important;
+    }
+    
+    .simple-instructions p {
+        font-size: 18px !important;
     }
     
     #game {
         height: 65vh;
-        max-height: 500px;
-        border-width: 4px;
-    }
-    
-    .channel-link {
-        padding: 8px 16px;
-        font-size: 13px;
-    }
-    
-    h1, h2 {
-        font-size: 20px !important;
-        margin-bottom: 12px !important;
-    }
-    
-    .subtitle {
-        font-size: 14px !important;
-        margin-bottom: 20px !important;
-    }
-    
-    .controls {
-        padding: 12px;
-        margin: 12px 0;
-    }
-    
-    .control {
-        margin: 8px 0;
-        padding: 6px 10px;
-    }
-    
-    .control .icon {
-        font-size: 18px;
-        min-width: 35px;
-    }
-    
-    .control .text {
-        font-size: 13px;
-    }
-    
-    button {
-        padding: 14px 30px;
-        font-size: 16px;
-        min-width: 220px;
-        min-height: 50px;
-        margin: 15px 0;
-    }
-    
-    .scores {
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .score-item {
-        margin: 10px 0;
-        padding: 8px;
-    }
-    
-    .score-item .label {
-        font-size: 14px;
-    }
-    
-    .score-item .value {
-        font-size: 18px;
-    }
-    
-    .hint {
-        font-size: 13px;
-        margin-top: 12px;
-        padding: 8px 12px;
-    }
-    
-    .footer {
-        padding: 10px;
-    }
-    
-    .footer p {
-        font-size: 13px;
+        min-height: 400px;
     }
 }
 
-@media (max-height: 700px) {
+/* ГОРИЗОНТАЛЬНАЯ ОРИЕНТАЦИЯ */
+@media (max-height: 500px) and (orientation: landscape) {
     #game {
-        height: 60vh;
+        height: 85vh;
+        max-height: none;
     }
     
-    #startScreen, #gameOverScreen {
-        padding: 15px 12px;
-        justify-content: flex-start;
-        padding-top: 40px;
+    h1 {
+        font-size: 24px !important;
+        margin-bottom: 15px !important;
     }
     
-    h1, h2 {
-        font-size: 18px !important;
-        margin-bottom: 10px !important;
+    .subtitle {
+        font-size: 16px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    button {
+        padding: 15px 30px !important;
+        font-size: 20px !important;
+        min-height: 65px !important;
+        margin: 20px 0 !important;
+    }
+    
+    #score {
+        font-size: 32px !important;
+    }
+}
+
+/* БОЛЬШИЕ ЭКРАНЫ */
+@media (min-width: 1200px) {
+    #game {
+        max-width: 1000px;
+        max-height: 750px;
+    }
+    
+    h1 {
+        font-size: 48px;
+    }
+    
+    button {
+        font-size: 36px;
+        padding: 30px 70px;
+    }
+    
+    #score {
+        font-size: 60px;
     }
 }
