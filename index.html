@@ -3,89 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Коза в Нижнем - Беги по Волге!</title>
+    <title>Коза в Нижнем - Полет над Волгой</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- ОТДЕЛЬНАЯ ССЫЛКА НА КАНАЛ (кликабельная!) -->
-        <div class="channel-link-container">
-            <a href="https://t.me/vnizhnem_est" target="_blank" class="channel-link-button">
-                📢 Подписаться на <strong>вНижнемЕсть</strong>
-            </a>
-        </div>
+        <!-- ССЫЛКА НА КАНАЛ -->
+        <a href="https://t.me/vnizhnem_est" target="_blank" class="channel-link">
+            📢 <strong>вНижнемЕсть</strong> в Telegram
+        </a>
         
         <div id="game">
             <div id="score">0</div>
             
             <!-- СТАРТОВЫЙ ЭКРАН -->
             <div id="startScreen">
-                <h1>🐐 Коза в Нижнем!</h1>
-                <p>Беги по набережной Волги, перепрыгивай лавочки!</p>
+                <h1>🐐 Коза в Нижнем</h1>
+                <p class="subtitle">Лети над Волгой, избегай лавочек!</p>
                 
-                <div class="controls-info">
-                    <div class="control-item">
-                        <span class="key">👆 Одинарный тап</span>
-                        <span class="desc">→ Обычный прыжок</span>
+                <div class="controls">
+                    <div class="control">
+                        <span class="icon">👆</span>
+                        <span class="text">Один тап = полет</span>
                     </div>
-                    <div class="control-item">
-                        <span class="key">👆👆 Двойной тап</span>
-                        <span class="desc">→ Супер-прыжок с сальто!</span>
+                    <div class="control">
+                        <span class="icon">👆👆</span>
+                        <span class="text">Два тапа = рывок вверх</span>
                     </div>
-                    <div class="control-item">
-                        <span class="key">🥟 Золотой пельмень</span>
-                        <span class="desc">→ +15 очков</span>
+                    <div class="control">
+                        <span class="icon">🥟</span>
+                        <span class="text">Золотой пельмень = +10</span>
                     </div>
-                    <div class="control-item">
-                        <span class="key">💀 Красный пельмень</span>
-                        <span class="desc">→ -10 очков</span>
+                    <div class="control">
+                        <span class="icon">💀</span>
+                        <span class="text">Красный пельмень = -20</span>
                     </div>
                 </div>
                 
-                <div class="game-buttons">
-                    <button id="startBtn">🎮 НАЧАТЬ БЕГ!</button>
-                </div>
+                <button id="startBtn">НАЧАТЬ ПОЛЕТ</button>
                 
-                <p class="hint">Двойной тап = супер-прыжок через всё!</p>
+                <p class="hint">Держись подальше от красных пельменей у потолка!</p>
             </div>
             
             <!-- ЭКРАН ПРОИГРЫША -->
             <div id="gameOverScreen" style="display: none;">
-                <h2>💥 Споткнулся о лавочку!</h2>
-                <div class="score-display">
-                    <p class="current-score">Собрано очков: <span id="finalScore">0</span></p>
-                    <p class="record-score">🏆 Рекорд: <span id="highScore">0</span></p>
+                <h2>💥 Упал в Волгу!</h2>
+                <div class="scores">
+                    <div class="score-item">
+                        <span class="label">Очки:</span>
+                        <span class="value" id="finalScore">0</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="label">🏆 Рекорд:</span>
+                        <span class="value" id="highScore">0</span>
+                    </div>
                 </div>
                 
-                <div class="game-buttons">
-                    <button id="restartBtn">🔄 Бежать снова!</button>
-                </div>
+                <button id="restartBtn">ЛЕТЕТЬ СНОВА</button>
                 
-                <p class="hint">Попробуй супер-прыжки для рекорда!</p>
+                <p class="hint">Используй двойной тап для маневров!</p>
             </div>
             
-            <!-- ХОЛСТ ДЛЯ ИГРЫ -->
+            <!-- ХОЛСТ -->
             <canvas id="canvas" width="800" height="600"></canvas>
         </div>
         
-         <!-- ФУТЕР -->
+        <!-- ФУТЕР -->
         <div class="footer">
-            <p>Игра создана командой 
-                <a href="https://t.me/vnizhnem_est" target="_blank" class="channel-link">
-                    <strong>вНижнемЕсть</strong>
-                </a>
-            </p>
-            <p>Знаешь Нижний лучше? Докажи! 🏙️</p>
+            <p>Игра создана для проекта <strong>"вНижнемЕсть"</strong></p>
+            <p>Больше интересного о Нижнем Новгороде в нашем канале!</p>
         </div>
     </div>
-    <script src="game.js"></script>
-</body>
-</html>
 
     <script src="game.js"></script>
 </body>
 </html>
-
-        
