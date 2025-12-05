@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Коза в Нижнем - Telegram Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Telegram-specific styles */
+        body {
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #0a1538, #1a1a5e);
+            overflow: hidden;
+        }
+        
+        .telegram-footer {
+            display: none !important;
+        }
+        
+        /* Улучшения для Telegram */
+        #game {
+            height: 85vh !important;
+            max-height: 85vh !important;
+            border-width: 5px !important;
+            margin-top: 0 !important;
+        }
+        
+        .tg-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .tg-buttons button {
+            flex: 1;
+            padding: 15px 10px !important;
+            font-size: 16px !important;
+            min-width: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="width: 100%; max-width: 100%;">
+        <div id="game">
+            <div id="score">0</div>
+            
+            <div id="startScreen">
+                <h1 style="font-size: 28px !important;">🐐 Коза в Нижнем</h1>
+                <p class="subtitle" style="font-size: 18px !important;">Теперь в Telegram!</p>
+                
+                <div class="simple-instructions">
+                    <p>Тапни чтобы лететь</p>
+                </div>
+                
+                <button id="startBtn" style="font-size: 24px !important; padding: 18px 40px !important;">СТАРТ</button>
+                
+                <div class="high-score">
+                    <p>🏆 Рекорд: <span id="currentHighScore">0</span></p>
+                </div>
+                
+                <!-- Telegram features -->
+                <div id="tgUserInfo" style="margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; display: none;">
+                    <p id="tgUsername" style="margin: 5px 0; font-size: 16px;"></p>
+                    <p id="tgBestScore" style="margin: 5px 0; font-size: 16px;"></p>
+                </div>
+            </div>
+            
+            <div id="gameOverScreen" style="display: none;">
+                <h2 style="font-size: 26px !important;">💥 Упал!</h2>
+                
+                <div class="final-scores">
+                    <div class="score-row">
+                        <span>Твой счет:</span>
+                        <span class="score-value" id="finalScore">0</span>
+                    </div>
+                    <div class="score-row">
+                        <span>Рекорд:</span>
+                        <span class="score-value" id="highScore">0</span>
+                    </div>
+                </div>
+                
+                <button id="restartBtn" style="font-size: 22px !important; padding: 15px 30px !important;">ИГРАТЬ СНОВА</button>
+                
+                <p class="game-tip">Лети выше птиц, ниже лавочек!</p>
+                
+                <!-- Telegram Share Buttons -->
+                <div class="tg-buttons">
+                    <button id="tgShareBtn" style="background: #0088cc; border-color: #00ccff;">
+                        📢 Поделиться
+                    </button>
+                    <button id="tgChannelBtn" style="background: #FF8C00; border-color: #FFD700;">
+                        📢 Наш канал
+                    </button>
+                </div>
+            </div>
+            
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Telegram Integration Script -->
+    <script>
+        // Initialize Telegram Web App
+        const tg = window.Telegram.WebApp;
+        
+        // Expand to full screen
+        tg.expand();
+        
+        // Set Telegram theme colors
+        tg.setHeaderColor('#0a1538');
+        tg.setBackgroundColor('#0a1538');
+        
+        // Configure Main Button
+        tg.MainButton.setText('🔙 Закрыть игру');
+        tg.MainButton.onClick(() => tg.close());
+        tg.MainButton.show();
+        
+        // Get user info
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            console.log('Telegram User:', user);
+            
+            // Show user info
+            const userInfoEl = document.getElementById('tgUserInfo');
+            const usernameEl = document.getElementById('tgUsername');
+            const bestScoreEl = document.getElementById('tgBestScore');
+            
+            if (userInfoEl && usernameEl) {
+                userInfoEl.style.display = 'block';
+                usernameEl.textContent = `Игрок: ${user.first_name || 'Гость'}`;
+                if (user.username) {
+                    usernameEl.textContent += ` (@${user.username})`;
+                }
+                
+                // Try to get best score from localStorage with user prefix
+                const userBestScore = localStorage.getItem(`tg_${user.id}_best_score`) || 0;
+                bestScoreEl.textContent = `Лучший: ${userBestScore} очков`;
+                
+                // Update current high score display
+                document.getElementById('currentHighScore').textContent = userBestScore;
+            }
+        }
+        
+        // Share function
+        function shareGame() {
+            const score = document.getElementById('finalScore')?.textContent || '0';
+            const shareText = `🎮 Я набрал ${score} очков в игре "Коза в Нижнем"! Сможешь побить?`;
+            
+            if (tg.shareGame) {
+                tg.shareGame({
+                    title: 'Коза в Нижнем',
+                    text: shareText,
+                    url: 'https://t.me/vnizhnem_est'
+                });
+            } else {
+                tg.openTelegramLink(`https://t.me/share/url?url=https://t.me/vnizhnem_est&text=${encodeURIComponent(shareText)}`);
+            }
+        }
+        
+        // Open channel
+        function openChannel() {
+            tg.openTelegramLink('https://t.me/vnizhnem_est');
+        }
+        
+        // Save score to Telegram cloud (simulated)
+        function saveScoreToTelegram(score) {
+            if (user) {
+                // Save locally with user prefix
+                const currentBest = localStorage.getItem(`tg_${user.id}_best_score`) || 0;
+                if (score > currentBest) {
+                    localStorage.setItem(`tg_${user.id}_best_score`, score);
+                }
+                
+                // Send data to bot (simplified version)
+                tg.sendData(JSON.stringify({
+                    action: 'save_score',
+                    user_id: user.id,
+                    username: user.username || user.first_name || 'anonymous',
+                    score: score
+                }));
+            }
+        }
+        
+        // Attach event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Share button
+            document.getElementById('tgShareBtn')?.addEventListener('click', shareGame);
+            
+            // Channel button
+            document.getElementById('tgChannelBtn')?.addEventListener('click', openChannel);
+            
+            // Modify game's endGame function
+            const originalEndGame = window.endGame;
+            if (typeof originalEndGame === 'function') {
+                window.endGame = function() {
+                    // Call original
+                    originalEndGame();
+                    
+                    // Telegram specific actions
+                    const finalScore = parseInt(document.getElementById('finalScore')?.textContent || '0');
+                    saveScoreToTelegram(finalScore);
+                    
+                    // Show Telegram buttons
+                    const tgButtons = document.querySelector('.tg-buttons');
+                    if (tgButtons) tgButtons.style.display = 'flex';
+                };
+            }
+        });
+    </script>
+    
+    <!-- Original Game Script -->
+    <script src="game.js"></script>
+    
+    <script>
+        // Adjust game for Telegram
+        document.addEventListener('DOMContentLoaded', function() {
+            // Resize canvas for Telegram
+            setTimeout(() => {
+                if (typeof resizeCanvas === 'function') {
+                    resizeCanvas();
+                }
+            }, 100);
+            
+            // Load high score for Telegram user
+            if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+                const tgBestScore = localStorage.getItem(`tg_${userId}_best_score`) || 0;
+                document.getElementById('currentHighScore').textContent = tgBestScore;
+            }
+        });
+    </script>
+</body>
+</html>

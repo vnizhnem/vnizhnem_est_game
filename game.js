@@ -2,6 +2,30 @@
 // КОЗА В НИЖНЕМ - БОЛЬШЕ ПТИЦ!
 // ====================
 
+// Telegram Web App Detection
+const isTelegram = typeof window.Telegram !== 'undefined' && window.Telegram.WebApp;
+
+// Telegram variables
+let tg = null;
+let telegramUser = null;
+
+if (isTelegram) {
+    tg = window.Telegram.WebApp;
+    telegramUser = tg.initDataUnsafe?.user;
+    console.log('Telegram Web App detected! User:', telegramUser);
+    
+    // Expand to full screen
+    tg.expand();
+    
+    // Set Telegram theme colors
+    tg.setHeaderColor('#0a1538');
+    tg.setBackgroundColor('#0a1538');
+    
+    // Configure Main Button
+    tg.MainButton.setText('🔙 Закрыть игру');
+    tg.MainButton.onClick(() => tg.close());
+}
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -73,7 +97,6 @@ BG_IMG.onerror = function() {
 const GROUND_IMG = new Image();
 GROUND_IMG.src = 'ground.png';
 GROUND_IMG.onerror = function() {
-    // Запасное изображение земли - УЛУЧШЕННОЕ, чтобы не было щелей
     this.src = 'data:image/svg+xml;base64,' + btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60">
             <defs>
@@ -121,21 +144,23 @@ let frames = 0;
 const goat = {
     x: 150,
     y: 300,
-    width: 50,
-    height: 50,
+    width: isTelegram ? 45 : 50, // Чуть меньше для Telegram
+    height: isTelegram ? 45 : 50,
     velocity: 0,
-    gravity: 0.5,
-    jumpStrength: -8,
+    gravity: isTelegram ? 0.45 : 0.5, // Легче для мобильных
+    jumpStrength: isTelegram ? -9 : -8, // Сильнее прыжок для тапов
     rotation: 0
 };
 
-// Лавочки - ФИКС: ставим ПРЯМО НА ЗЕМЛЮ
+// Лавочки
 const benches = [];
 const BENCH = {
     width: 100,
     height: 60,
     gap: 200,
-    speed: 3
+    speed: isTelegram ? 2.8 : 3, // Медленнее для мобильных
+    minY: 300,
+    maxY: 450
 };
 
 // Пельмени
@@ -147,23 +172,97 @@ const PELMEN = {
     spawnChance: 0.6
 };
 
-// Птицы враги
+// Птицы враги - меньше на мобильных
 const enemyBirds = [];
 const ENEMY_BIRD = {
     width: 60,
     height: 40,
     points: -20,
-    spawnChance: 0.45,
-    speed: 3
+    spawnChance: isTelegram ? 0.35 : 0.45, // Меньше птиц на мобильных
+    speed: isTelegram ? 2.5 : 3
 };
 
-// Земля - ФИКС: увеличиваем высоту и делаем без щелей
+// Земля
 const ground = {
     x: 0,
-    y: 540, // Позиция фиксированная
-    height: 60, // Увеличили высоту
-    speed: 3
+    y: 540,
+    height: 60,
+    speed: isTelegram ? 2.8 : 3
 };
+
+// ====================
+// TELEGRAM FUNCTIONS
+// ====================
+function saveScoreToTelegram(userScore) {
+    if (!isTelegram || !telegramUser) return;
+    
+    try {
+        const userId = telegramUser.id;
+        const storageKey = `tg_${userId}_best_score`;
+        const currentBest = parseInt(localStorage.getItem(storageKey) || '0');
+        
+        if (userScore > currentBest) {
+            localStorage.setItem(storageKey, userScore);
+            
+            // Update display
+            const currentHighScoreEl = document.getElementById('currentHighScore');
+            if (currentHighScoreEl) {
+                currentHighScoreEl.textContent = userScore;
+            }
+            
+            // Send to bot
+            if (tg && tg.sendData) {
+                tg.sendData(JSON.stringify({
+                    action: 'save_score',
+                    userId: userId,
+                    username: telegramUser.username || telegramUser.first_name || 'Игрок',
+                    score: userScore,
+                    timestamp: new Date().toISOString()
+                }));
+            }
+            
+            // Vibrate on new record
+            if (navigator.vibrate && userScore > 50) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        }
+        
+        return Math.max(userScore, currentBest);
+    } catch (error) {
+        console.log('Error saving to Telegram:', error);
+        return 0;
+    }
+}
+
+function shareGameTelegram() {
+    if (!isTelegram || !tg) return;
+    
+    const shareText = `🎮 Я набрал ${score} очков в игре "Коза в Нижнем"! Сможешь побить мой рекорд?`;
+    
+    try {
+        if (tg.shareGame) {
+            tg.shareGame({
+                title: 'Коза в Нижнем',
+                text: shareText,
+                url: 'https://t.me/vnizhnem_est'
+            });
+        } else {
+            tg.openTelegramLink(`https://t.me/share/url?url=https://t.me/vnizhnem_est&text=${encodeURIComponent(shareText)}`);
+        }
+    } catch (error) {
+        console.log('Error sharing game:', error);
+    }
+}
+
+function openTelegramChannel() {
+    if (!isTelegram || !tg) return;
+    
+    try {
+        tg.openTelegramLink('https://t.me/vnizhnem_est');
+    } catch (error) {
+        console.log('Error opening channel:', error);
+    }
+}
 
 // ====================
 // УПРАВЛЕНИЕ
@@ -173,6 +272,11 @@ function handleJump() {
         startGame();
     } else if (!gameOver) {
         goat.velocity = goat.jumpStrength;
+        
+        // Vibrate on jump in Telegram
+        if (isTelegram && navigator.vibrate) {
+            navigator.vibrate(50);
+        }
     } else {
         resetGame();
     }
@@ -183,12 +287,14 @@ function handleGameClick(e) {
     // Проверяем, не кликнули ли по Telegram-ссылке
     if (e.target.closest('.telegram-button') || 
         e.target.closest('.telegram-footer') ||
-        e.target.closest('.footer-text')) {
+        e.target.closest('.tg-share-button') ||
+        e.target.closest('.tg-channel-button')) {
         return;
     }
     
     // Проверяем, не кликнули ли по кнопке
-    if (e.target.id === 'startBtn' || e.target.id === 'restartBtn') {
+    if (e.target.id === 'startBtn' || e.target.id === 'restartBtn' ||
+        e.target.id === 'tgShareBtn' || e.target.id === 'tgChannelBtn') {
         return;
     }
     
@@ -199,13 +305,16 @@ function handleGameClick(e) {
 document.addEventListener('click', handleGameClick);
 
 document.addEventListener('touchstart', function(e) {
+    // Проверяем Telegram-specific элементы
     if (e.target.closest('.telegram-button') || 
         e.target.closest('.telegram-footer') ||
-        e.target.closest('.footer-text')) {
+        e.target.closest('.tg-share-button') ||
+        e.target.closest('.tg-channel-button')) {
         return;
     }
     
-    if (e.target.id === 'startBtn' || e.target.id === 'restartBtn') {
+    if (e.target.id === 'startBtn' || e.target.id === 'restartBtn' ||
+        e.target.id === 'tgShareBtn' || e.target.id === 'tgChannelBtn') {
         return;
     }
     
@@ -223,6 +332,53 @@ document.addEventListener('keydown', function(e) {
 // Кнопки
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+// Telegram buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Share button
+    const shareBtn = document.getElementById('tgShareBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            shareGameTelegram();
+        });
+    }
+    
+    // Channel button
+    const channelBtn = document.getElementById('tgChannelBtn');
+    if (channelBtn) {
+        channelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openTelegramChannel();
+        });
+    }
+    
+    // Load Telegram user's best score
+    if (isTelegram && telegramUser) {
+        const userId = telegramUser.id;
+        const storageKey = `tg_${userId}_best_score`;
+        const telegramBestScore = localStorage.getItem(storageKey) || 0;
+        
+        // Update display
+        const currentHighScoreEl = document.getElementById('currentHighScore');
+        if (currentHighScoreEl) {
+            currentHighScoreEl.textContent = telegramBestScore;
+        }
+        
+        // Show Telegram username if available
+        if (telegramUser.first_name) {
+            const title = document.querySelector('h1');
+            if (title) {
+                title.innerHTML = `🐐 Привет, ${telegramUser.first_name}!`;
+                setTimeout(() => {
+                    title.innerHTML = '🐐 Коза в Нижнем';
+                }, 3000);
+            }
+        }
+    }
+});
 
 // ====================
 // ИГРОВАЯ ЛОГИКА
@@ -249,6 +405,11 @@ function startGame() {
     
     // Обновляем размер канваса
     resizeCanvas();
+    
+    // Показываем кнопку закрытия в Telegram
+    if (isTelegram && tg && tg.MainButton) {
+        tg.MainButton.show();
+    }
     
     // Добавляем первую лавочку
     addBench();
@@ -277,14 +438,22 @@ function resetGame() {
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
     document.getElementById('score').textContent = '0';
-    document.getElementById('currentHighScore').textContent = highScore;
+    
+    // Обновляем рекорд для Telegram
+    if (isTelegram && telegramUser) {
+        const userId = telegramUser.id;
+        const storageKey = `tg_${userId}_best_score`;
+        const telegramBestScore = localStorage.getItem(storageKey) || 0;
+        document.getElementById('currentHighScore').textContent = telegramBestScore;
+    } else {
+        document.getElementById('currentHighScore').textContent = highScore;
+    }
 }
 
 function addBench() {
-    // Лавочка стоит ПРЯМО НА ЗЕМЛЕ
     benches.push({
         x: canvas.width,
-        y: ground.y - BENCH.height, // Ставим на землю
+        y: ground.y - BENCH.height,
         width: BENCH.width,
         height: BENCH.height,
         passed: false
@@ -385,6 +554,11 @@ function update() {
             pelmen.effectTime = frames;
             
             document.getElementById('score').textContent = score;
+            
+            // Vibrate on collect in Telegram
+            if (isTelegram && navigator.vibrate && score % 50 === 0) {
+                navigator.vibrate([30, 30, 30]);
+            }
         }
         
         if (pelmen.x + pelmen.width < -50) {
@@ -418,6 +592,11 @@ function update() {
             
             // Отталкивание козы при столкновении
             goat.velocity = -6;
+            
+            // Vibrate on hit in Telegram
+            if (isTelegram && navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
         }
         
         if (bird.x + bird.width < -100) {
@@ -447,14 +626,36 @@ function update() {
 function endGame() {
     gameOver = true;
     
+    // Update global high score
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('goatHighScore', highScore);
     }
     
+    // Save to Telegram
+    if (isTelegram && telegramUser) {
+        saveScoreToTelegram(score);
+    }
+    
+    // Update display
     document.getElementById('finalScore').textContent = score;
-    document.getElementById('highScore').textContent = highScore;
+    document.getElementById('highScore').textContent = Math.max(highScore, 
+        isTelegram && telegramUser ? localStorage.getItem(`tg_${telegramUser.id}_best_score`) || 0 : highScore
+    );
+    
+    // Show game over screen
     document.getElementById('gameOverScreen').style.display = 'flex';
+    
+    // Vibrate on game over
+    if (isTelegram && navigator.vibrate) {
+        navigator.vibrate([300, 100, 300]);
+    }
+    
+    // Show Telegram buttons
+    const tgButtons = document.querySelector('.tg-buttons');
+    if (tgButtons) {
+        tgButtons.style.display = 'flex';
+    }
 }
 
 // ====================
@@ -519,13 +720,12 @@ function draw() {
         }
     });
     
-    // ЗЕМЛЯ - рисуем ПЕРВОЙ (фон для лавочек)
+    // ЗЕМЛЯ
     for (let i = 0; i <= Math.ceil(canvas.width / canvas.width) + 1; i++) {
-        // Рисуем землю с перекрытием, чтобы не было щелей
         ctx.drawImage(GROUND_IMG, ground.x + i * canvas.width, ground.y, canvas.width + 2, ground.height);
     }
     
-    // ЛАВОЧКИ - рисуем ПОСЛЕ земли (стоят на земле)
+    // ЛАВОЧКИ
     benches.forEach(bench => {
         ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
     });
@@ -535,6 +735,15 @@ function draw() {
     ctx.translate(goat.x + goat.width/2, goat.y + goat.height/2);
     ctx.rotate(goat.rotation);
     ctx.drawImage(BIRD_IMG, -goat.width/2, -goat.height/2, goat.width, goat.height);
+    
+    // Telegram indicator (small crown for Telegram users)
+    if (isTelegram && telegramUser && score > 100) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('👑', 0, -40);
+    }
+    
     ctx.restore();
 }
 
@@ -552,11 +761,37 @@ function gameLoop() {
 window.addEventListener('load', function() {
     // Устанавливаем рекорд
     highScore = parseInt(localStorage.getItem('goatHighScore')) || 0;
-    document.getElementById('currentHighScore').textContent = highScore;
+    
+    // For Telegram users, load their best score
+    if (isTelegram && telegramUser) {
+        const userId = telegramUser.id;
+        const telegramBestScore = localStorage.getItem(`tg_${userId}_best_score`) || 0;
+        document.getElementById('currentHighScore').textContent = telegramBestScore;
+    } else {
+        document.getElementById('currentHighScore').textContent = highScore;
+    }
     
     // Настраиваем размер канваса
     resizeCanvas();
     
-    // Рисуем начальный экран
+    // Initial draw
     draw();
+    
+    // Show Telegram Main Button
+    if (isTelegram && tg && tg.MainButton) {
+        tg.MainButton.show();
+    }
+    
+    console.log('Game loaded successfully!');
+    console.log('Telegram mode:', isTelegram ? 'ON' : 'OFF');
+    if (isTelegram) {
+        console.log('Telegram user:', telegramUser);
+    }
 });
+
+// Export functions for Telegram
+if (isTelegram) {
+    window.shareGameTelegram = shareGameTelegram;
+    window.openTelegramChannel = openTelegramChannel;
+    window.saveScoreToTelegram = saveScoreToTelegram;
+}
