@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Flappy Нижний - Игра про козу в Нижнем Новгороде</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="game">
+            <div id="score">0</div>
+            <div id="startScreen">
+                <h1>Коза в Нижнем!</h1>
+                <p>Помоги козе бежать по набережной<br>и перепрыгивать лавочки!</p>
+                <p>Нажми ПРОБЕЛ, коснись экрана<br>или нажми кнопку ниже</p>
+                <button id="startBtn">СТАРТ!</button>
+                <p class="hint">Собирай пельмени для бонусов! 🥟</p>
+            </div>
+            <div id="gameOverScreen" style="display: none;">
+                <h2>Коза споткнулась!</h2>
+                <p>Очки: <span id="finalScore">0</span></p>
+                <p>Рекорд: <span id="highScore">0</span></p>
+                <button id="restartBtn">Играть снова</button>
+                <p class="hint">Попробуй побить рекорд!</p>
+            </div>
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+        <div class="footer">
+            <p>🐐 Игра создана для гида по Нижнему Новгороду</p>
+            <p>Летим по Волге, обгоняем лавочки!</p>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
