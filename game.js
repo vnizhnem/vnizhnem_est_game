@@ -1,5 +1,5 @@
 // ====================
-// НИЖЕГОРОДСКАЯ КОЗА
+// НИЖЕГОРОДСКАЯ КОЗА (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ====================
 
 // Получаем canvas и context
@@ -35,7 +35,9 @@ const goat = {
     velocity: 0,
     gravity: 0.5,
     jumpStrength: -10,
-    rotation: 0
+    rotation: 0,
+    maxJumpHeight: 200, // МАКСИМАЛЬНАЯ ВЫСОТА ПРЫЖКА!
+    isAtCeiling: false
 };
 
 // Массив лавочек (препятствий)
@@ -141,6 +143,7 @@ function startGame() {
     pelmeni.length = 0;
     goat.y = canvas.height / 2;
     goat.velocity = 0;
+    goat.isAtCeiling = false;
     
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
@@ -158,6 +161,7 @@ function resetGame() {
     pelmeni.length = 0;
     goat.y = canvas.height / 2;
     goat.velocity = 0;
+    goat.isAtCeiling = false;
     
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('startScreen').style.display = 'flex';
@@ -207,6 +211,15 @@ function update() {
     goat.rotation = goat.velocity * 0.1;
     if (goat.rotation > 0.5) goat.rotation = 0.5;
     if (goat.rotation < -0.5) goat.rotation = -0.5;
+    
+    // ОГРАНИЧЕНИЕ ВЫСОТЫ - ФИКС БАГА!
+    if (goat.y < goat.maxJumpHeight) {
+        goat.y = goat.maxJumpHeight;
+        goat.velocity = 0;
+        goat.isAtCeiling = true;
+    } else {
+        goat.isAtCeiling = false;
+    }
     
     // Движение земли
     ground.x -= ground.speed;
@@ -294,12 +307,6 @@ function update() {
         endGame();
     }
     
-    // Коллизия с потолком
-    if (goat.y < 0) {
-        goat.y = 0;
-        goat.velocity = 0;
-    }
-    
     // Автоматическое добавление лавочек
     if (frames % 120 === 0) {
         addPipe();
@@ -327,6 +334,18 @@ function endGame() {
 function draw() {
     // Фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
+    
+    // Индикатор максимальной высоты (красная линия)
+    if (gameStarted && !gameOver) {
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, goat.maxJumpHeight);
+        ctx.lineTo(canvas.width, goat.maxJumpHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
     
     // Лавочки
     pipes.forEach(pipe => {
