@@ -18,21 +18,46 @@
                 <p>Собирай пельмени для бонусов! 🥟</p>
                 <p>Нажми ПРОБЕЛ, коснись экрана<br>или нажми кнопку ниже</p>
                 <button id="startBtn">СТАРТ!</button>
+                <button id="showRecordBtn" class="record-btn">🏆 Мой рекорд: <span id="currentHighScore">0</span></button>
             </div>
             <div id="gameOverScreen" style="display: none;">
                 <h2>Коза споткнулась!</h2>
                 <p>Очки: <span id="finalScore">0</span></p>
                 <p>Рекорд: <span id="highScore">0</span></p>
                 <button id="restartBtn">Играть снова</button>
+                <button id="showRecordAfterGame" class="record-btn">Посмотреть рекорд</button>
                 <p class="hint">Попробуй побить рекорд!</p>
             </div>
             <canvas id="canvas" width="800" height="600"></canvas>
         </div>
         <div class="footer">
-            <p>🐐 Игра создана командой <strong>вНижнемЕсть</strong></p>
-            <p>Летим по Волге, собираем пельмени! 🥟</p>
+    <p>🐐 Игра создана командой 
+        <strong>
+            <a href="https://t.me/vnizhnem_est" target="_blank" class="channel-link">
+                вНижнемЕсть
+            </a>
+        </strong>
+    </p>
+    <p>Летим по Волге, собираем пельмени! 🥟</p>
+</div>
+
+    <!-- Оверлей и попап для рекорда -->
+    <div id="recordOverlay" class="overlay" style="display: none;"></div>
+    <div id="recordPopup" class="record-popup" style="display: none;">
+        <h3>🏆 Мой рекорд</h3>
+        <div class="record-stats">
+            <p>Лучший счет: <span class="record-value" id="popupHighScore">0</span></p>
+            <p>Собрано пельменей: <span class="record-value" id="totalPelmeni">0</span></p>
+            <p>Всего игр: <span class="record-value" id="totalGames">0</span></p>
         </div>
+        <div class="record-achievements">
+            <p class="achievement" id="achievement1">🥉 100+ очков</p>
+            <p class="achievement" id="achievement2">🥈 250+ очков</p>
+            <p class="achievement" id="achievement3">🥇 500+ очков</p>
+        </div>
+        <button id="closeRecordBtn" class="close-btn">Закрыть</button>
     </div>
+
     <script src="game.js"></script>
 </body>
 </html>

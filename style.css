@@ -96,7 +96,7 @@ button {
     font-size: 20px;
     border-radius: 50px;
     cursor: pointer;
-    margin: 20px 0;
+    margin: 10px 0;
     font-family: 'Press Start 2P', cursive;
     transition: all 0.3s;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -136,6 +136,136 @@ button:active {
     color: #FFD700;
 }
 
+/* Кнопка рекорда */
+.record-btn {
+    background: linear-gradient(45deg, #4a148c, #7b1fa2) !important;
+    border: 3px solid #9c4dcc !important;
+    font-size: 16px !important;
+    padding: 12px 30px !important;
+    margin-top: 15px !important;
+}
+
+.record-btn:hover {
+    background: linear-gradient(45deg, #7b1fa2, #4a148c) !important;
+    border-color: #ba68c8 !important;
+}
+
+/* Оверлей и попап рекорда */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 400;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.record-popup {
+    background: linear-gradient(135deg, #1a237e, #4a148c);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    border: 5px solid #FFD700;
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+    min-width: 350px;
+    max-width: 90%;
+    z-index: 401;
+    position: relative;
+}
+
+.record-popup h3 {
+    color: #FFD700;
+    margin-bottom: 25px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 22px;
+}
+
+.record-stats {
+    font-size: 18px;
+    margin: 20px 0;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.record-stats p {
+    margin: 12px 0;
+    font-size: 18px;
+}
+
+.record-value {
+    color: #FFD700;
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.record-achievements {
+    margin: 25px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+/* Стили для ссылки на канал */
+.channel-link {
+    color: #FFD700 !important;
+    text-decoration: none !important;
+    transition: all 0.3s !important;
+    padding: 2px 5px !important;
+    border-radius: 5px !important;
+}
+
+.channel-link:hover {
+    color: #ffffff !important;
+    background: rgba(255, 215, 0, 0.2) !important;
+    text-decoration: underline !important;
+}
+
+.channel-link:active {
+    transform: scale(0.95) !important;
+}
+
+/* Для мобильных */
+@media (max-width: 600px) {
+    .channel-link {
+        display: inline-block !important;
+        margin: 0 3px !important;
+    }
+}
+.achievement {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.achievement.unlocked {
+    background: rgba(255, 215, 0, 0.2);
+    border-left: 4px solid #FFD700;
+    color: #FFD700;
+}
+
+.achievement.locked {
+    opacity: 0.5;
+    color: #888;
+}
+
+.close-btn {
+    background: linear-gradient(45deg, #d32f2f, #f44336) !important;
+    border: 3px solid #ff7961 !important;
+    margin-top: 20px !important;
+}
+
+.close-btn:hover {
+    background: linear-gradient(45deg, #f44336, #d32f2f) !important;
+}
+
 /* Адаптация для мобильных */
 @media (max-width: 600px) {
     h1, h2 {
@@ -151,9 +281,31 @@ button:active {
         font-size: 16px;
     }
     
+    .record-btn {
+        font-size: 14px !important;
+        padding: 10px 20px !important;
+    }
+    
     #score {
         font-size: 30px;
         top: 10px;
         left: 10px;
+    }
+    
+    .record-popup {
+        min-width: 280px;
+        padding: 20px;
+    }
+    
+    .record-popup h3 {
+        font-size: 18px;
+    }
+    
+    .record-stats p {
+        font-size: 16px;
+    }
+    
+    .record-value {
+        font-size: 20px;
     }
 }

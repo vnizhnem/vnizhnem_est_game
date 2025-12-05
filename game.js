@@ -1,5 +1,5 @@
 // ====================
-// НИЖЕГОРОДСКАЯ КОЗА (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// НИЖЕГОРОДСКАЯ КОЗА (ПОЛНАЯ ВЕРСИЯ)
 // ====================
 
 // Получаем canvas и context
@@ -21,10 +21,13 @@ GROUND_IMG.src = 'ground.png'; // Земля/набережная
 
 // Игровые переменные
 let score = 0;
-let highScore = localStorage.getItem('flappyHighScore') || 0;
+let highScore = parseInt(localStorage.getItem('flappyHighScore')) || 0;
+let totalGames = parseInt(localStorage.getItem('totalGames')) || 0;
+let totalPelmeni = parseInt(localStorage.getItem('totalPelmeni')) || 0;
 let gameOver = false;
 let gameStarted = false;
 let frames = 0;
+let collectedInThisGame = 0;
 
 // Позиция козы
 const goat = {
@@ -56,23 +59,27 @@ const PIPE = {
     maxY: 500       // Максимальная Y позиция
 };
 
-// Настройки пельменей
+// Настройки пельменей (УЛУЧШЕННЫЕ!)
 const PELMEN = {
-    width: 30,
-    height: 30,
-    points: 10
+    width: 40,      // Чуть больше
+    height: 25,     // Форма пельменя
+    points: 15,     // Больше очков
+    spawnChance: 0.7 // 70% шанс появления
 };
 
-// Загружаем пельмень (SVG изображение)
+// Загружаем пельмень (КРАСИВЫЙ SVG!)
 const PELMEN_IMG = new Image();
 PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="45" fill="#ffffff" stroke="#ff6b6b" stroke-width="3"/>
-    <circle cx="35" cy="40" r="8" fill="#ff6b6b"/>
-    <circle cx="65" cy="40" r="8" fill="#ff6b6b"/>
-    <path d="M30,65 Q50,85 70,65" fill="none" stroke="#ff6b6b" stroke-width="4"/>
-    <circle cx="40" cy="30" r="3" fill="#ffffff"/>
-    <circle cx="60" cy="30" r="3" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60">
+    <!-- Основная форма пельменя -->
+    <ellipse cx="50" cy="30" rx="45" ry="25" fill="#f8f8f8" stroke="#d4a574" stroke-width="3"/>
+    <!-- Текстура -->
+    <ellipse cx="50" cy="30" rx="35" ry="18" fill="none" stroke="#e6c9a8" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <!-- Складки по краям -->
+    <path d="M15,30 Q25,15 35,30 Q45,45 55,30 Q65,15 75,30 Q85,45 85,30" 
+          fill="none" stroke="#b08d57" stroke-width="2" stroke-linecap="round"/>
+    <!-- Блеск -->
+    <ellipse cx="35" cy="20" rx="8" ry="4" fill="rgba(255,255,255,0.6)"/>
 </svg>
 `);
 
@@ -118,7 +125,9 @@ function handleJump(e) {
     }
 }
 
-// Клавиатура
+// ====================
+// ОБРАБОТЧИКИ КНОПОК
+// ====================
 document.addEventListener('keydown', function(e) {
     if (e.code === 'Space') {
         e.preventDefault();
@@ -126,9 +135,56 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Кнопки
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+// Кнопки рекорда
+document.getElementById('showRecordBtn').addEventListener('click', showRecordPopup);
+document.getElementById('showRecordAfterGame').addEventListener('click', showRecordPopup);
+document.getElementById('closeRecordBtn').addEventListener('click', hideRecordPopup);
+
+// Клик по оверлею закрывает попап
+document.getElementById('recordOverlay').addEventListener('click', hideRecordPopup);
+
+// ====================
+// СИСТЕМА РЕКОРДОВ
+// ====================
+function updateHighScoreDisplay() {
+    document.getElementById('currentHighScore').textContent = highScore;
+    document.getElementById('popupHighScore').textContent = highScore;
+    document.getElementById('totalPelmeni').textContent = totalPelmeni;
+    document.getElementById('totalGames').textContent = totalGames;
+    
+    // Ачивки
+    const achievements = [
+        { id: 'achievement1', score: 100, text: '🥉 100+ очков' },
+        { id: 'achievement2', score: 250, text: '🥈 250+ очков' },
+        { id: 'achievement3', score: 500, text: '🥇 500+ очков' }
+    ];
+    
+    achievements.forEach(ach => {
+        const element = document.getElementById(ach.id);
+        if (highScore >= ach.score) {
+            element.classList.add('unlocked');
+            element.classList.remove('locked');
+        } else {
+            element.classList.add('locked');
+            element.classList.remove('unlocked');
+        }
+        element.textContent = ach.text + (highScore >= ach.score ? ' ✓' : '');
+    });
+}
+
+function showRecordPopup() {
+    updateHighScoreDisplay();
+    document.getElementById('recordOverlay').style.display = 'flex';
+    document.getElementById('recordPopup').style.display = 'block';
+}
+
+function hideRecordPopup() {
+    document.getElementById('recordOverlay').style.display = 'none';
+    document.getElementById('recordPopup').style.display = 'none';
+}
 
 // ====================
 // ИГРОВАЯ ЛОГИКА
@@ -139,6 +195,7 @@ function startGame() {
     gameStarted = true;
     gameOver = false;
     score = 0;
+    collectedInThisGame = 0;
     pipes.length = 0;
     pelmeni.length = 0;
     goat.y = canvas.height / 2;
@@ -149,6 +206,10 @@ function startGame() {
     document.getElementById('gameOverScreen').style.display = 'none';
     document.getElementById('score').textContent = '0';
     
+    // Увеличиваем счетчик игр
+    totalGames++;
+    localStorage.setItem('totalGames', totalGames);
+    
     // Первая лавочка
     addPipe();
 }
@@ -157,6 +218,7 @@ function resetGame() {
     gameOver = false;
     gameStarted = false;
     score = 0;
+    collectedInThisGame = 0;
     pipes.length = 0;
     pelmeni.length = 0;
     goat.y = canvas.height / 2;
@@ -180,21 +242,32 @@ function addPipe() {
     
     pipes.push(newPipe);
     
-    // С вероятностью 50% добавляем пельмень над лавочкой
-    if (Math.random() > 0.5) {
+    // С вероятностью 70% добавляем пельмень (ЧАЩЕ!)
+    if (Math.random() < PELMEN.spawnChance) {
         addPelmen(newPipe.x, newPipe.y);
     }
 }
 
 function addPelmen(pipeX, pipeY) {
-    // Пельмень появляется над лавочкой
+    // Пельмень появляется В ДОСТУПНОМ МЕСТЕ (не у потолка!)
+    const minY = pipeY - 80;  // Минимум на 80px выше лавочки
+    const maxY = goat.maxJumpHeight + 80; // Максимум ниже потолка
+    
+    const pelmenY = Math.random() * (maxY - minY) + minY;
+    
+    // Пельмень может быть как слева, так и справа от лавочки
+    const offset = Math.random() > 0.5 ? -40 : 40;
+    
     pelmeni.push({
-        x: pipeX + PIPE.width / 2 - PELMEN.width / 2,
-        y: pipeY - 60, // Над лавочкой
+        x: pipeX + PIPE.width / 2 - PELMEN.width / 2 + offset,
+        y: pelmenY,
         width: PELMEN.width,
         height: PELMEN.height,
         collected: false,
-        float: 0 // Для плавающей анимации
+        float: Math.random() * Math.PI * 2, // Разная начальная фаза
+        speed: 0.5 + Math.random() * 0.5,   // Разная скорость анимации
+        side: offset > 0 ? 'right' : 'left', // С какой стороны
+        scale: 0.8 + Math.random() * 0.4    // Разный размер
     });
 }
 
@@ -263,39 +336,57 @@ function update() {
         }
     }
     
-    // Пельмени
+    // ПЕЛЬМЕНИ (УЛУЧШЕННАЯ ЛОГИКА)
     for (let i = pelmeni.length - 1; i >= 0; i--) {
         const pelmen = pelmeni[i];
         
         if (pelmen.collected) continue;
         
-        // Анимация плавания
-        pelmen.float += 0.1;
-        pelmen.y += Math.sin(pelmen.float) * 0.5;
+        // Плавная анимация плавания
+        pelmen.float += pelmen.speed * 0.05;
+        pelmen.y += Math.sin(pelmen.float) * 0.8;
         
-        // Движение с той же скоростью
+        // Легкое движение в сторону
+        if (pelmen.side === 'left') {
+            pelmen.x -= 0.3;
+        } else {
+            pelmen.x += 0.3;
+        }
+        
+        // Основное движение с игрой
         pelmen.x -= PIPE.speed;
         
-        // Коллизия с козой
+        // Коллизия с козой (УВЕЛИЧЕННАЯ ЗОНА!)
+        const collisionMargin = 15;
         if (
-            goat.x + goat.width > pelmen.x &&
-            goat.x < pelmen.x + pelmen.width &&
-            goat.y + goat.height > pelmen.y &&
-            goat.y < pelmen.y + pelmen.height
+            goat.x + goat.width - collisionMargin > pelmen.x &&
+            goat.x + collisionMargin < pelmen.x + pelmen.width &&
+            goat.y + goat.height - collisionMargin > pelmen.y &&
+            goat.y + collisionMargin < pelmen.y + pelmen.height
         ) {
             pelmen.collected = true;
+            collectedInThisGame++;
             score += PELMEN.points;
             document.getElementById('score').textContent = score;
             
-            // Удаляем через 300 мс для анимации
+            // Сохраняем общее количество пельменей
+            totalPelmeni++;
+            localStorage.setItem('totalPelmeni', totalPelmeni);
+            
+            // Запоминаем время сбора для анимации
+            pelmen.collectTime = Date.now();
+            pelmen.collectX = pelmen.x;
+            pelmen.collectY = pelmen.y;
+            
+            // Удаляем через 250 мс (чтобы увидеть анимацию)
             setTimeout(() => {
                 const index = pelmeni.indexOf(pelmen);
                 if (index > -1) pelmeni.splice(index, 1);
-            }, 300);
+            }, 250);
         }
         
         // Удаление за экраном
-        if (pelmen.x + pelmen.width < 0) {
+        if (pelmen.x + pelmen.width < -50 || pelmen.x > canvas.width + 50) {
             pelmeni.splice(i, 1);
         }
     }
@@ -320,6 +411,7 @@ function endGame() {
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('flappyHighScore', highScore);
+        updateHighScoreDisplay();
     }
     
     // Показать экран Game Over
@@ -352,15 +444,59 @@ function draw() {
         ctx.drawImage(PIPE_IMG, pipe.x, pipe.y, pipe.width, pipe.height);
     });
     
-    // Пельмени
+    // ПЕЛЬМЕНИ (КРАСИВАЯ ОТРИСОВКА)
     pelmeni.forEach(pelmen => {
         if (!pelmen.collected) {
-            // Анимация вращения
+            // Сохраняем состояние контекста
             ctx.save();
+            
+            // Перемещаем к центру пельменя
             ctx.translate(pelmen.x + pelmen.width/2, pelmen.y + pelmen.height/2);
-            ctx.rotate(pelmen.float * 0.5);
+            
+            // Плавное вращение
+            ctx.rotate(pelmen.float * 0.3);
+            
+            // Легкая пульсация
+            const pulse = 1 + Math.sin(pelmen.float * 2) * 0.1;
+            ctx.scale(pelmen.scale * pulse, pelmen.scale * pulse);
+            
+            // Рисуем пельмень
             ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+            
+            // Восстанавливаем контекст
             ctx.restore();
+        } else {
+            // Анимация сбора пельменя
+            const timeSinceCollect = Date.now() - (pelmen.collectTime || 0);
+            if (timeSinceCollect < 250) {
+                const progress = timeSinceCollect / 250;
+                const opacity = 1 - progress;
+                const scale = 1 + progress * 0.5;
+                const yOffset = -progress * 30;
+                
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.translate(
+                    (pelmen.collectX || pelmen.x) + pelmen.width/2,
+                    (pelmen.collectY || pelmen.y) + pelmen.height/2 + yOffset
+                );
+                ctx.scale(scale, scale);
+                ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+                ctx.restore();
+                
+                // Текст "+15"
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 24px "Press Start 2P", Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    `+${PELMEN.points}`,
+                    (pelmen.collectX || pelmen.x) + pelmen.width/2,
+                    (pelmen.collectY || pelmen.y) - 20 - progress * 20
+                );
+                ctx.restore();
+            }
         }
     });
     
@@ -412,10 +548,10 @@ window.onload = function() {
         };
     });
     
-    // Обновление рекорда на стартовом экране
-    document.getElementById('highScore').textContent = highScore;
-    
     // Проверка пельменя
     PELMEN_IMG.onload = () => console.log('Пельмень загружен!');
     PELMEN_IMG.onerror = () => console.error('Ошибка загрузки пельменя');
+    
+    // Обновление отображения рекорда
+    updateHighScoreDisplay();
 };
