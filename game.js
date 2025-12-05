@@ -265,7 +265,7 @@ function updateBonuses() {
         }
     }
     
-    // Обновляем попап бонуса
+    // Обновляем попап бонуса - ВАЖНО: исправлено имя переменной!
     if (isBonusPopupActive && bonusPopupTime > 0) {
         bonusPopupTime--;
         if (bonusPopupTime <= 0) {
@@ -580,8 +580,15 @@ function update() {
     frames++;
     
     // Если активен попап бонуса - ставим игру на паузу
+    // НО продолжаем обновлять время попапа
     if (isBonusPopupActive) {
-        return;
+        // Обновляем таймер попапа
+        if (bonusPopupTime > 0) {
+            bonusPopupTime--;
+        } else {
+            isBonusPopupActive = false;
+        }
+        return; // Не обновляем игровую логику пока активен попап
     }
     
     // Обновляем стартовую дугу
