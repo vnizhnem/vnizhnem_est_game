@@ -12,7 +12,7 @@ function resizeCanvas() {
     canvas.height = gameContainer.clientHeight;
     
     // Обновляем позицию земли
-    ground.y = canvas.height - 50;
+    ground.y = canvas.height - ground.height;
     
     // Обновляем позицию козы
     if (!gameStarted || gameOver) {
@@ -73,10 +73,20 @@ BG_IMG.onerror = function() {
 const GROUND_IMG = new Image();
 GROUND_IMG.src = 'ground.png';
 GROUND_IMG.onerror = function() {
+    // Запасное изображение земли - УЛУЧШЕННОЕ, чтобы не было щелей
     this.src = 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 50">
-            <rect width="800" height="50" fill="#228B22"/>
-            <rect y="20" width="800" height="10" fill="#32CD32"/>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60">
+            <defs>
+                <pattern id="grassPattern" width="50" height="60" patternUnits="userSpaceOnUse">
+                    <rect width="50" height="60" fill="#228B22"/>
+                    <rect y="40" width="50" height="20" fill="#32CD32"/>
+                    <circle cx="10" cy="45" r="3" fill="#228B22"/>
+                    <circle cx="30" cy="48" r="2" fill="#228B22"/>
+                    <circle cx="40" cy="46" r="4" fill="#228B22"/>
+                </pattern>
+            </defs>
+            <rect width="800" height="60" fill="url(#grassPattern)"/>
+            <rect y="55" width="800" height="5" fill="#1a5c1a"/>
         </svg>
     `);
 };
@@ -119,15 +129,13 @@ const goat = {
     rotation: 0
 };
 
-// Лавочки - ФИКС: уменьшаем высоту и поднимаем выше
+// Лавочки - ФИКС: ставим ПРЯМО НА ЗЕМЛЮ
 const benches = [];
 const BENCH = {
     width: 100,
-    height: 50,  // Уменьшили высоту с 60 до 50
+    height: 60,
     gap: 200,
-    speed: 3,
-    minY: 300,   // Подняли минимальную высоту с 400 до 300
-    maxY: 450    // Подняли максимальную высоту с 500 до 450
+    speed: 3
 };
 
 // Пельмени
@@ -149,11 +157,11 @@ const ENEMY_BIRD = {
     speed: 3
 };
 
-// Земля - ФИКС: уменьшаем высоту
+// Земля - ФИКС: увеличиваем высоту и делаем без щелей
 const ground = {
     x: 0,
-    y: 550,
-    height: 40,  // Уменьшили высоту с 50 до 40
+    y: 540, // Позиция фиксированная
+    height: 60, // Увеличили высоту
     speed: 3
 };
 
@@ -174,8 +182,8 @@ function handleJump() {
 function handleGameClick(e) {
     // Проверяем, не кликнули ли по Telegram-ссылке
     if (e.target.closest('.telegram-button') || 
-        e.target.closest('.telegram-bottom-link') ||
-        e.target.closest('.footer-link')) {
+        e.target.closest('.telegram-footer') ||
+        e.target.closest('.footer-text')) {
         return;
     }
     
@@ -192,8 +200,8 @@ document.addEventListener('click', handleGameClick);
 
 document.addEventListener('touchstart', function(e) {
     if (e.target.closest('.telegram-button') || 
-        e.target.closest('.telegram-bottom-link') ||
-        e.target.closest('.footer-link')) {
+        e.target.closest('.telegram-footer') ||
+        e.target.closest('.footer-text')) {
         return;
     }
     
@@ -273,9 +281,10 @@ function resetGame() {
 }
 
 function addBench() {
+    // Лавочка стоит ПРЯМО НА ЗЕМЛЕ
     benches.push({
         x: canvas.width,
-        y: Math.random() * (BENCH.maxY - BENCH.minY) + BENCH.minY,
+        y: ground.y - BENCH.height, // Ставим на землю
         width: BENCH.width,
         height: BENCH.height,
         passed: false
@@ -458,11 +467,6 @@ function draw() {
     // Фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
     
-    // Лавочки - ФИКС: рисуем ПЕРЕД землей
-    benches.forEach(bench => {
-        ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
-    });
-    
     // Пельмени
     pelmeni.forEach(pelmen => {
         if (!pelmen.collected) {
@@ -515,10 +519,16 @@ function draw() {
         }
     });
     
-    // Земля - ФИКС: рисуем ПОСЛЕ лавочек
+    // ЗЕМЛЯ - рисуем ПЕРВОЙ (фон для лавочек)
     for (let i = 0; i <= Math.ceil(canvas.width / canvas.width) + 1; i++) {
-        ctx.drawImage(GROUND_IMG, ground.x + i * canvas.width, ground.y, canvas.width, ground.height);
+        // Рисуем землю с перекрытием, чтобы не было щелей
+        ctx.drawImage(GROUND_IMG, ground.x + i * canvas.width, ground.y, canvas.width + 2, ground.height);
     }
+    
+    // ЛАВОЧКИ - рисуем ПОСЛЕ земли (стоят на земле)
+    benches.forEach(bench => {
+        ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
+    });
     
     // Коза
     ctx.save();
