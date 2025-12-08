@@ -819,48 +819,49 @@ function draw() {
     ctx.restore();
     
     // ====================
-    // ПАНЕЛЬ ИНФОРМАЦИИ (левый верхний угол)
+    // НИЖНЯЯ ПАНЕЛЬ (GROUND) С УРОВНЕМ И ЖИЗНЯМИ
     // ====================
-    const panelWidth = 120;
-    const panelX = 15;
-    const panelY = 15;
     
-    // Фон панели очков
+    // Фон для нижней панели (ground)
+    const groundPanelY = ground.y;
+    const groundPanelHeight = 60;
+    
+    // Рисуем уровень на нижней панели (левый нижний угол)
+    const levelPanelWidth = 100;
+    const levelPanelX = 15;
+    const levelPanelY = groundPanelY + 10;
+    
+    // Фон панели уровня
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(panelX, panelY, panelWidth, 60);
-    ctx.strokeStyle = '#FFD700'; // Золотая рамка
-    ctx.lineWidth = 3;
-    ctx.strokeRect(panelX, panelY, panelWidth, 60);
+    ctx.fillRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
+    ctx.strokeStyle = '#00FF00'; // Зеленая рамка
+    ctx.lineWidth = 2;
+    ctx.strokeRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
     
-    // Очки
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 24px Arial';
+    // Уровень
+    ctx.fillStyle = '#00FF00';
+    ctx.font = 'bold 22px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(score, panelX + panelWidth / 2, panelY + 25);
+    ctx.fillText(`LVL ${currentLevel}`, levelPanelX + levelPanelWidth / 2, levelPanelY + 20);
     
-    // Надпись "ОЧКИ" под цифрами
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText('ОЧКИ', panelX + panelWidth / 2, panelY + 50);
-    
-    // ====================
-    // ПАНЕЛЬ ЖИЗНЕЙ (под очками)
-    // ====================
-    const livesPanelY = panelY + 75;
+    // Рисуем жизни на нижней панели (правый нижний угол)
+    const livesPanelWidth = 120;
+    const livesPanelX = canvas.width - livesPanelWidth - 15;
+    const livesPanelY = groundPanelY + 10;
     
     // Фон панели жизней
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(panelX, livesPanelY, panelWidth, 50);
+    ctx.fillRect(livesPanelX, livesPanelY, livesPanelWidth, 40);
     ctx.strokeStyle = '#FF0000'; // Красная рамка
     ctx.lineWidth = 2;
-    ctx.strokeRect(panelX, livesPanelY, panelWidth, 50);
+    ctx.strokeRect(livesPanelX, livesPanelY, livesPanelWidth, 40);
     
     // Сердечки
-    const heartSize = 20;
-    const heartSpacing = 25;
-    const heartsStartX = panelX + 25;
-    const heartsY = livesPanelY + 25;
+    const heartSize = 16;
+    const heartSpacing = 22;
+    const heartsStartX = livesPanelX + 25;
+    const heartsY = livesPanelY + 20;
     
     for (let i = 0; i < maxLives; i++) {
         if (i < lives) {
@@ -884,27 +885,6 @@ function draw() {
             ctx.globalAlpha = 1.0;
         }
     }
-    
-    // ====================
-    // ПАНЕЛЬ УРОВНЯ (правый верхний угол)
-    // ====================
-    const levelPanelWidth = 100;
-    const levelPanelX = canvas.width - levelPanelWidth - 15;
-    const levelPanelY = 15;
-    
-    // Фон панели уровня
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
-    ctx.strokeStyle = '#00FF00'; // Зеленая рамка
-    ctx.lineWidth = 2;
-    ctx.strokeRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
-    
-    // Уровень
-    ctx.fillStyle = '#00FF00';
-    ctx.font = 'bold 22px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`LVL ${currentLevel}`, levelPanelX + levelPanelWidth / 2, levelPanelY + 20);
     
     // Функция рисования сердца
     function drawHeart(ctx, x, y, size) {
