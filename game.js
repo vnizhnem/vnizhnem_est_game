@@ -129,21 +129,22 @@ const BENCH = {
     maxY: gameDifficulty.pipeMaxY
 };
 
-// Пельмени - БАЗОВЫЕ значения
+// Пельмени
 const PELMEN = {
     width: 35,
     height: 20,
-    basePoints: 15, // УВЕЛИЧЕННЫЙ БАЗОВЫЙ БОНУС
+    points: 15, // УВЕЛИЧЕННЫЙ БАЗОВЫЙ БОНУС
     spawnChance: gameDifficulty.pelmenSpawnChance
 };
 
-// 💩 Какашки (вместо птиц) - БАЗОВЫЕ значения
+// 💩 Какашки (вместо птиц)
 const POOP = {
     width: 50,
     height: 50,
-    basePoints: -30, // УВЕЛИЧЕННЫЙ БАЗОВЫЙ ШТРАФ
+    points: -30, // УВЕЛИЧЕННЫЙ БАЗОВЫЙ ШТРАФ
     baseSpawnChance: gameDifficulty.birdSpawnChance,
-    baseSpeed: gameDifficulty.birdSpeed
+    baseSpeed: gameDifficulty.birdSpeed,
+    effect: "💩"
 };
 
 // Земля
@@ -160,7 +161,7 @@ const pelmeni = [];
 const poops = []; // Вместо enemyBirds
 
 // ====================
-// УСЛОЖНЕННЫЕ ФУНКЦИИ УРОВНЕЙ С ПРОПОРЦИОНАЛЬНОЙ СИСТЕМОЙ
+// УСЛОЖНЕННЫЕ ФУНКЦИИ УРОВНЕЙ
 // ====================
 
 function getCurrentSpeed() {
@@ -180,13 +181,13 @@ function getPoopSpeed() {
 // УВЕЛИЧЕННЫЕ БОНУСЫ за уровень
 function getPelmenPoints() {
     // На высоких уровнях пельмени дают НАМНОГО больше очков
-    return PELMEN.basePoints + Math.floor((currentLevel - 1) * 8); // Быстрый рост
+    return PELMEN.points + Math.floor((currentLevel - 1) * 8); // Быстрый рост
 }
 
 // УВЕЛИЧЕННЫЕ ШТРАФЫ за уровень
 function getPoopPoints() {
     // На высоких уровнях какашки отнимают НАМНОГО больше очков
-    return POOP.basePoints - Math.floor((currentLevel - 1) * 15); // Быстрый рост
+    return POOP.points - Math.floor((currentLevel - 1) * 15); // Быстрый рост
 }
 
 function updateLevel() {
@@ -358,7 +359,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ====================
-// ИГРОВАЯ ЛОГИКА (УСЛОЖНЕННАЯ С ПРОПОРЦИОНАЛЬНОЙ СИСТЕМОЙ)
+// ИГРОВАЯ ЛОГИКА (УСЛОЖНЕННАЯ)
 // ====================
 
 function startGame() {
@@ -462,8 +463,7 @@ function addPelmen() {
         height: PELMEN.height,
         collected: false,
         float: Math.random() * Math.PI * 2,
-        type: 'good',
-        points: getPelmenPoints() // Динамические очки
+        type: 'good'
     });
 }
 
@@ -484,7 +484,6 @@ function addPoop() {
         hit: false,
         float: Math.random() * Math.PI * 2,
         type: 'bad',
-        points: getPoopPoints(), // Динамический штраф
         speed: getPoopSpeed() + Math.random() * 1.0, // Более случайная скорость
         wave: Math.random() * Math.PI * 2,
         rotation: 0,
@@ -576,9 +575,8 @@ function update() {
             goat.y + 10 < pelmen.y + pelmen.height) {
             
             pelmen.collected = true;
-            const points = pelmen.points;
-            score += points;
-            pelmen.effect = '+' + points;
+            score += getPelmenPoints(); // Используем функцию для получения очков
+            pelmen.effect = '+' + getPelmenPoints();
             pelmen.effectTime = frames;
             
             document.getElementById('score').textContent = score;
@@ -608,10 +606,9 @@ function update() {
             goat.y + 15 < poop.y + poop.height) {
             
             poop.hit = true;
-            const points = poop.points;
-            score += points;
+            score += getPoopPoints(); // Используем функцию для получения штрафа
             if (score < 0) score = 0;
-            poop.effect = points;
+            poop.effect = getPoopPoints();
             poop.effectTime = frames;
             
             // Увеличиваем счетчик столкновений
@@ -742,7 +739,7 @@ function draw() {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = 'bold 14px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(`+${pelmen.points}`, 0, -25);
+                ctx.fillText(`+${getPelmenPoints()}`, 0, -25);
             }
             
             ctx.restore();
@@ -782,7 +779,7 @@ function draw() {
             ctx.fillStyle = '#8B4513';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`${poop.points}`, 0, -30);
+            ctx.fillText(`${getPoopPoints()}`, 0, -30);
         }
         
         ctx.restore();
@@ -981,7 +978,7 @@ function gameLoop() {
 }
 
 // ====================
-// ИНИЦИАЛИЗАЦИЯ И ПРИВЯЗКА КНОПОК
+// ИНИЦИАЛИЗАЦИЯ
 // ====================
 
 function initializeGame() {
@@ -1002,28 +999,29 @@ function initializeGame() {
         tg.MainButton.show();
     }
     
-    // Привязка кнопок
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    
-    if (startBtn) {
-        startBtn.addEventListener('click', startGame);
-    } else {
-        console.error('Кнопка startBtn не найдена!');
-    }
-    
-    if (restartBtn) {
-        restartBtn.addEventListener('click', resetGame);
-    }
-    
+    // Привязка кнопок В НАЧАЛЕ инициализации (после объявления всех функций)
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', resetGame);
+
     // Telegram buttons
-    const shareBtn = document.getElementById('tgShareBtn');
-    if (shareBtn) shareBtn.addEventListener('click', shareGameTelegram);
+    document.addEventListener('DOMContentLoaded', function() {
+        const shareBtn = document.getElementById('tgShareBtn');
+        if (shareBtn) shareBtn.addEventListener('click', shareGameTelegram);
+        
+        const channelBtn = document.getElementById('tgChannelBtn');
+        if (channelBtn) channelBtn.addEventListener('click', openTelegramChannel);
+        
+        if (isTelegram && telegramUser) {
+            const userId = telegramUser.id;
+            const storageKey = `tg_${userId}_best_score`;
+            const telegramBestScore = localStorage.getItem(storageKey) || 0;
+            
+            const currentHighScoreEl = document.getElementById('currentHighScore');
+            if (currentHighScoreEl) currentHighScoreEl.textContent = telegramBestScore;
+        }
+    });
     
-    const channelBtn = document.getElementById('tgChannelBtn');
-    if (channelBtn) channelBtn.addEventListener('click', openTelegramChannel);
-    
-    console.log('Game loaded with enhanced level system and bankruptcy mechanics!');
+    console.log('Game loaded with enhanced level system, bankruptcy mechanics and increased rewards!');
 }
 
 // Запуск инициализации при загрузке страницы
