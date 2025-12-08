@@ -1,5 +1,5 @@
 // ====================
-// КОЗА В НИЖНЕМ - С ЛЕВЕЛАМИ И ШАУРМОЙ DARK SIDE!
+// КОЗА В НИЖНЕМ - БЕЗ ШАУРМЫ, С КАКАШКАМИ И УСЛОЖНЕНИЯМИ!
 // ====================
 
 // Telegram Web App Detection
@@ -66,8 +66,9 @@ GROUND_IMG.onerror = function() {
 const PELMEN_IMG = new Image();
 PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><ellipse cx="50" cy="30" rx="45" ry="25" fill="#FFD700" stroke="#b8860b" stroke-width="3"/></svg>`);
 
-const ENEMY_BIRD_IMG = new Image();
-ENEMY_BIRD_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="#333333"/><circle cx="70" cy="40" r="15" fill="#222222"/><circle cx="75" cy="38" r="4" fill="#ffffff"/><polygon points="85,40 95,35 95,45" fill="#ff9900"/></svg>`);
+// 💩 Эмодзи какашки вместо птиц
+const POOP_IMG = new Image();
+POOP_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,20 C65,15 80,20 80,40 C80,60 65,75 50,80 C35,75 20,60 20,40 C20,20 35,15 50,20 Z" fill="#8B4513"/><ellipse cx="35" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="65" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#A0522D"/></svg>`);
 
 // ====================
 // ИГРОВЫЕ ПЕРЕМЕННЫЕ
@@ -79,38 +80,26 @@ let gameOver = false;
 let gameStarted = false;
 let frames = 0;
 
-// Система уровней
+// Система уровней - УСЛОЖНЕННАЯ
 let currentLevel = 1;
 let speedMultiplier = 1.0;
 let levelUpEffect = 0;
-let nextLevelAt = 200;
+let nextLevelAt = 150; // Быстрее переход на новый уровень
 
 // Плавный старт
 let startArcProgress = 0;
 let isStartingArc = true;
 
-// ====================
-// СИСТЕМА БОНУСОВ
-// ====================
-
-// Активный бонус
-let activeBonus = null;
-let bonusTimer = 0;
-let bonusPopupTime = 0;
-let isBonusPopupActive = false;
-
-// Бонус "Шаурма Dark Side"
-const SHAWARMA_BONUS = {
-    name: "Шаурма Dark Side",
-    emoji: "🍔",
-    effect: "shield",
-    duration: 300, // 5 секунд (300 кадров при 60fps)
-    color: "#FF6B00", // Оранжевый
-    lastActivatedAt: 0
+// Сложность игры
+let gameDifficulty = {
+    gravity: isTelegram ? 0.45 : 0.5,
+    pipeGap: isTelegram ? 200 : 200,
+    pipeMinY: 300,
+    pipeMaxY: 450,
+    birdSpawnChance: isTelegram ? 0.35 : 0.45,
+    birdSpeed: isTelegram ? 2.5 : 3,
+    pelmenSpawnChance: 0.6
 };
-
-// Массив визуальных эффектов бонусов
-const bonusEffects = [];
 
 // Коза
 const goat = {
@@ -119,7 +108,7 @@ const goat = {
     width: isTelegram ? 45 : 50,
     height: isTelegram ? 45 : 50,
     velocity: 0,
-    gravity: isTelegram ? 0.45 : 0.5,
+    gravity: gameDifficulty.gravity,
     jumpStrength: isTelegram ? -9 : -8,
     rotation: 0,
     startY: 300,
@@ -130,10 +119,10 @@ const goat = {
 const BENCH = {
     width: 100,
     height: 60,
-    gap: 200,
+    gap: gameDifficulty.pipeGap,
     baseSpeed: isTelegram ? 2.8 : 3,
-    minY: 300,
-    maxY: 450
+    minY: gameDifficulty.pipeMinY,
+    maxY: gameDifficulty.pipeMaxY
 };
 
 // Пельмени
@@ -141,16 +130,17 @@ const PELMEN = {
     width: 35,
     height: 20,
     points: 10,
-    spawnChance: 0.6
+    spawnChance: gameDifficulty.pelmenSpawnChance
 };
 
-// Птицы
-const ENEMY_BIRD = {
-    width: 60,
-    height: 40,
-    points: -20,
-    baseSpawnChance: isTelegram ? 0.35 : 0.45,
-    baseSpeed: isTelegram ? 2.5 : 3
+// 💩 Какашки (вместо птиц)
+const POOP = {
+    width: 50,
+    height: 50,
+    points: -25, // Больше штраф
+    baseSpawnChance: gameDifficulty.birdSpawnChance,
+    baseSpeed: gameDifficulty.birdSpeed,
+    effect: "💩"
 };
 
 // Земля
@@ -164,33 +154,50 @@ const ground = {
 // Массивы
 const benches = [];
 const pelmeni = [];
-const enemyBirds = [];
+const poops = []; // Вместо enemyBirds
 
 // ====================
-// ФУНКЦИИ УРОВНЕЙ
+// УСЛОЖНЕННЫЕ ФУНКЦИИ УРОВНЕЙ
 // ====================
 
 function getCurrentSpeed() {
     return ground.baseSpeed * speedMultiplier;
 }
 
-function getBirdSpawnChance() {
-    return ENEMY_BIRD.baseSpawnChance + (currentLevel - 1) * 0.07;
+function getPoopSpawnChance() {
+    // Быстрее растёт сложность
+    return POOP.baseSpawnChance + (currentLevel - 1) * 0.12;
 }
 
-function getBirdSpeed() {
-    return ENEMY_BIRD.baseSpeed * (1 + (currentLevel - 1) * 0.15);
+function getPoopSpeed() {
+    // Больше прирост скорости
+    return POOP.baseSpeed * (1 + (currentLevel - 1) * 0.25);
 }
 
 function updateLevel() {
     if (score >= nextLevelAt) {
         currentLevel++;
-        speedMultiplier = 1.0 + (currentLevel - 1) * 0.2;
-        nextLevelAt = 200 + (currentLevel - 1) * 150;
+        
+        // Сильнее увеличиваем сложность
+        speedMultiplier = 1.0 + (currentLevel - 1) * 0.25;
+        
+        // Увеличиваем гравитацию с уровнем
+        goat.gravity = gameDifficulty.gravity * (1 + (currentLevel - 1) * 0.1);
+        
+        // Уменьшаем силу прыжка с уровнем
+        goat.jumpStrength = (isTelegram ? -9 : -8) * (1 - (currentLevel - 1) * 0.05);
+        
+        nextLevelAt = 150 + (currentLevel - 1) * 120; // Быстрее растут требования
+        
         levelUpEffect = 90;
         
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate([150, 80, 150, 80, 150]);
+        }
+        
+        // Добавляем внезапную какашку при переходе уровня
+        if (Math.random() < 0.7) {
+            addPoop();
         }
     }
 }
@@ -216,98 +223,6 @@ function updateStartArc() {
     
     goat.y = goat.startY - goat.arcHeight * heightMultiplier;
     goat.rotation = -parabolaProgress * 0.3;
-}
-
-// ====================
-// СИСТЕМА БОНУСОВ
-// ====================
-
-function checkAutoBonus() {
-    // Активируем бонус автоматически каждые 200 очков
-    if (score > 0 && score % 200 === 0 && score !== SHAWARMA_BONUS.lastActivatedAt) {
-        SHAWARMA_BONUS.lastActivatedAt = score;
-        
-        // Создаем визуальный эффект
-        createBonusEffect();
-        
-        // Активируем бонус
-        activateBonus('shawarma');
-        
-        console.log('Бонус Шаурма активирован автоматически за 200 очков!');
-    }
-}
-
-function createBonusEffect() {
-    // Создаем эффект появления бонуса в случайном месте
-    const effectX = Math.random() * (canvas.width - 100) + 50;
-    const effectY = Math.random() * (canvas.height - 200) + 100;
-    
-    bonusEffects.push({
-        x: effectX,
-        y: effectY,
-        width: 80,
-        height: 80,
-        type: 'shawarma_effect',
-        lifetime: 60, // 1 секунда
-        scale: 0.5,
-        alpha: 1.0,
-        rotation: 0
-    });
-}
-
-function updateBonuses() {
-    // Обновляем активный бонус
-    if (activeBonus === 'shawarma' && bonusTimer > 0) {
-        bonusTimer--;
-        if (bonusTimer <= 0) {
-            activeBonus = null;
-            console.log('Щит закончился!');
-        }
-    }
-    
-    // Обновляем попап бонуса - ВАЖНО: исправлено имя переменной!
-    if (isBonusPopupActive && bonusPopupTime > 0) {
-        bonusPopupTime--;
-        if (bonusPopupTime <= 0) {
-            isBonusPopupActive = false;
-        }
-    }
-    
-    // Обновляем визуальные эффекты
-    for (let i = bonusEffects.length - 1; i >= 0; i--) {
-        const effect = bonusEffects[i];
-        
-        if (effect.type === 'shawarma_effect') {
-            effect.lifetime--;
-            effect.scale += 0.02;
-            effect.alpha -= 0.016;
-            effect.rotation += 0.05;
-            
-            if (effect.lifetime <= 0) {
-                bonusEffects.splice(i, 1);
-            }
-        }
-    }
-}
-
-function activateBonus(type) {
-    if (type === 'shawarma') {
-        activeBonus = 'shawarma';
-        bonusTimer = SHAWARMA_BONUS.duration;
-        bonusPopupTime = 120; // 2 секунды для попапа
-        isBonusPopupActive = true;
-        
-        console.log('Активирован бонус: Шаурма Dark Side!');
-        
-        // Вибрация в Telegram
-        if (isTelegram && navigator.vibrate) {
-            navigator.vibrate([200, 100, 200, 100, 200]);
-        }
-    }
-}
-
-function isInvincible() {
-    return activeBonus === 'shawarma' && bonusTimer > 0;
 }
 
 // ====================
@@ -351,7 +266,7 @@ function saveScoreToTelegram(userScore) {
 function shareGameTelegram() {
     if (!isTelegram || !tg) return;
     
-    const shareText = `🎮 Я достиг ${currentLevel} уровня и набрал ${score} очков в игре "Коза в Нижнем"! Сможешь побить?`;
+    const shareText = `🎮 Я достиг ${currentLevel} уровня и набрал ${score} очков в игре "Коза в Нижнем"! Сможешь побить? 💩`;
     
     try {
         if (tg.shareGame) {
@@ -450,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ====================
-// ИГРОВАЯ ЛОГИКА
+// ИГРОВАЯ ЛОГИКА (УСЛОЖНЕННАЯ)
 // ====================
 
 function startGame() {
@@ -460,21 +375,17 @@ function startGame() {
     currentLevel = 1;
     speedMultiplier = 1.0;
     levelUpEffect = 0;
-    nextLevelAt = 200;
+    nextLevelAt = 150;
     startArcProgress = 0;
     isStartingArc = true;
     
-    // Сброс бонусов
-    activeBonus = null;
-    bonusTimer = 0;
-    bonusPopupTime = 0;
-    isBonusPopupActive = false;
-    bonusEffects.length = 0;
-    SHAWARMA_BONUS.lastActivatedAt = 0;
+    // Сброс сложности
+    goat.gravity = gameDifficulty.gravity;
+    goat.jumpStrength = isTelegram ? -9 : -8;
     
     benches.length = 0;
     pelmeni.length = 0;
-    enemyBirds.length = 0;
+    poops.length = 0;
     
     goat.y = canvas.height / 2;
     goat.startY = canvas.height / 2;
@@ -503,20 +414,16 @@ function resetGame() {
     currentLevel = 1;
     speedMultiplier = 1.0;
     levelUpEffect = 0;
-    nextLevelAt = 200;
+    nextLevelAt = 150;
     isStartingArc = false;
     
-    // Сброс бонусов
-    activeBonus = null;
-    bonusTimer = 0;
-    bonusPopupTime = 0;
-    isBonusPopupActive = false;
-    bonusEffects.length = 0;
-    SHAWARMA_BONUS.lastActivatedAt = 0;
+    // Сброс сложности
+    goat.gravity = gameDifficulty.gravity;
+    goat.jumpStrength = isTelegram ? -9 : -8;
     
     benches.length = 0;
     pelmeni.length = 0;
-    enemyBirds.length = 0;
+    poops.length = 0;
     
     goat.y = canvas.height / 2;
     goat.velocity = 0;
@@ -539,11 +446,13 @@ function resetGame() {
 }
 
 function addBench() {
+    const benchHeight = BENCH.height + (currentLevel - 1) * 5; // Лавочки растут с уровнем
+    
     benches.push({
         x: canvas.width,
-        y: ground.y - BENCH.height,
+        y: ground.y - benchHeight,
         width: BENCH.width,
-        height: BENCH.height,
+        height: benchHeight,
         passed: false
     });
 }
@@ -560,17 +469,27 @@ function addPelmen() {
     });
 }
 
-function addEnemyBird() {
-    enemyBirds.push({
+function addPoop() {
+    // Сложнее траектория - иногда летят прямо на игрока
+    let targetY = goat.y;
+    if (Math.random() < 0.3) {
+        targetY = goat.y + (Math.random() * 100 - 50);
+    } else {
+        targetY = Math.random() * (canvas.height - 200) + 100;
+    }
+    
+    poops.push({
         x: canvas.width + 50,
-        y: Math.random() * (canvas.height - 200) + 100,
-        width: ENEMY_BIRD.width,
-        height: ENEMY_BIRD.height,
+        y: targetY,
+        width: POOP.width,
+        height: POOP.height,
         hit: false,
         float: Math.random() * Math.PI * 2,
         type: 'bad',
-        speed: getBirdSpeed() + Math.random() * 0.5,
-        wave: Math.random() * Math.PI * 2
+        speed: getPoopSpeed() + Math.random() * 0.8, // Более случайная скорость
+        wave: Math.random() * Math.PI * 2,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.2 // Вращение какашки
     });
 }
 
@@ -579,34 +498,16 @@ function update() {
     
     frames++;
     
-    // Если активен попап бонуса - ставим игру на паузу
-    // НО продолжаем обновлять время попапа
-    if (isBonusPopupActive) {
-        // Обновляем таймер попапа
-        if (bonusPopupTime > 0) {
-            bonusPopupTime--;
-        } else {
-            isBonusPopupActive = false;
-        }
-        return; // Не обновляем игровую логику пока активен попап
-    }
-    
     // Обновляем стартовую дугу
     if (isStartingArc) {
         updateStartArc();
         return;
     }
     
-    // Проверяем автоматический бонус
-    checkAutoBonus();
-    
     // Обновляем уровень
     updateLevel();
     
     if (levelUpEffect > 0) levelUpEffect--;
-    
-    // Обновляем бонусы
-    updateBonuses();
     
     // Физика козы
     goat.velocity += goat.gravity;
@@ -640,8 +541,8 @@ function update() {
         
         if (bench.x + bench.width < 0) benches.splice(i, 1);
         
-        // Если есть щит - игнорируем столкновения с лавочками
-        if (!isInvincible() && goat.x + goat.width > bench.x &&
+        // Столкновение с лавочкой
+        if (goat.x + goat.width > bench.x &&
             goat.x < bench.x + bench.width &&
             goat.y + goat.height > bench.y &&
             goat.y < bench.y + bench.height) {
@@ -677,53 +578,67 @@ function update() {
         if (pelmen.x + pelmen.width < -50) pelmeni.splice(i, 1);
     }
     
-    // Птицы
-    for (let i = enemyBirds.length - 1; i >= 0; i--) {
-        const bird = enemyBirds[i];
-        bird.x -= bird.speed;
-        bird.float += 0.1;
-        bird.wave += 0.05;
-        bird.y += Math.sin(bird.wave) * 2;
+    // 💩 Какашки
+    for (let i = poops.length - 1; i >= 0; i--) {
+        const poop = poops[i];
+        poop.x -= poop.speed;
+        poop.float += 0.1;
+        poop.wave += 0.05;
+        poop.y += Math.sin(poop.wave) * 2;
+        poop.rotation += poop.rotationSpeed;
         
-        // Если есть щит - игнорируем столкновения с птицами
-        if (!isInvincible() && !bird.hit &&
-            goat.x + goat.width - 15 > bird.x &&
-            goat.x + 15 < bird.x + bird.width &&
-            goat.y + goat.height - 15 > bird.y &&
-            goat.y + 15 < bird.y + bird.height) {
+        // Столкновение с какашкой
+        if (!poop.hit &&
+            goat.x + goat.width - 15 > poop.x &&
+            goat.x + 15 < poop.x + poop.width &&
+            goat.y + goat.height - 15 > poop.y &&
+            goat.y + 15 < poop.y + poop.height) {
             
-            bird.hit = true;
-            score += ENEMY_BIRD.points;
+            poop.hit = true;
+            score += POOP.points;
             if (score < 0) score = 0;
-            bird.effect = ENEMY_BIRD.points;
-            bird.effectTime = frames;
+            poop.effect = POOP.points;
+            poop.effectTime = frames;
+            
+            // Эффект отталкивания при попадании
+            goat.velocity = -8;
             
             document.getElementById('score').textContent = score;
-            goat.velocity = -6;
             
             if (isTelegram && navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
+                navigator.vibrate([200, 100, 200, 100, 200]);
             }
         }
         
-        if (bird.x + bird.width < -100) enemyBirds.splice(i, 1);
+        if (poop.x + poop.width < -100) poops.splice(i, 1);
     }
     
-    if (goat.y + goat.height > ground.y) {
+    // Смерть от падения или вылета вверх
+    if (goat.y + goat.height > ground.y || goat.y < -50) {
         gameOver = true;
         endGame();
     }
     
-    const spawnInterval = Math.max(70, 110 - (currentLevel - 1) * 8);
+    // УСЛОЖНЕННАЯ СИСТЕМА СПАВНА
+    const spawnInterval = Math.max(60, 100 - (currentLevel - 1) * 10); // Быстрее спавн
     
     if (frames % spawnInterval === 0) {
         addBench();
-        if (Math.random() < PELMEN.spawnChance) addPelmen();
-        if (Math.random() < getBirdSpawnChance()) addEnemyBird();
+        
+        // Меньше пельменей с повышением уровня
+        if (Math.random() < (PELMEN.spawnChance - (currentLevel - 1) * 0.05)) {
+            addPelmen();
+        }
+        
+        // Больше какашек с повышением уровня
+        if (Math.random() < getPoopSpawnChance()) {
+            addPoop();
+        }
     }
     
-    if (frames % Math.max(50, 70 - (currentLevel - 1) * 4) === 0 && Math.random() < 0.3) {
-        addEnemyBird();
+    // Иногда спавним дополнительную какашку
+    if (frames % Math.max(40, 60 - (currentLevel - 1) * 6) === 0 && Math.random() < 0.4) {
+        addPoop();
     }
 }
 
@@ -748,7 +663,8 @@ function endGame() {
     if (gameOverScreen && !gameOverScreen.querySelector('.level-info')) {
         const levelInfo = document.createElement('div');
         levelInfo.className = 'level-info';
-        levelInfo.innerHTML = `<p style="color:#FFD700; font-size:20px; margin-top:10px;">🏆 Достигнут уровень: ${currentLevel}</p>`;
+        levelInfo.innerHTML = `<p style="color:#FFD700; font-size:20px; margin-top:10px;">🏆 Достигнут уровень: ${currentLevel}</p>
+                              <p style="color:#8B4513; font-size:16px; margin-top:5px;">Избежано какашек: ${Math.floor(score/25)}</p>`;
         
         const finalScores = gameOverScreen.querySelector('.final-scores');
         if (finalScores) finalScores.after(levelInfo);
@@ -771,38 +687,11 @@ function draw() {
     
     // Фон с эффектом уровня
     if (levelUpEffect > 0 && levelUpEffect % 10 < 5) {
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.15)';
+        ctx.fillStyle = 'rgba(139, 69, 19, 0.15)'; // Коричневый вместо золотого
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
-    
-    // Эффекты бонусов
-    bonusEffects.forEach(effect => {
-        if (effect.type === 'shawarma_effect') {
-            ctx.save();
-            ctx.globalAlpha = effect.alpha;
-            ctx.translate(effect.x, effect.y);
-            ctx.rotate(effect.rotation);
-            ctx.scale(effect.scale, effect.scale);
-            
-            // Эффект шаурмы
-            ctx.font = 'bold 80px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Свечение
-            ctx.shadowColor = '#FF6B00';
-            ctx.shadowBlur = 20;
-            ctx.fillText('🍔', 0, 0);
-            
-            // Основной текст
-            ctx.shadowBlur = 0;
-            ctx.fillText('🍔', 0, 0);
-            
-            ctx.restore();
-        }
-    });
     
     // Пельмени
     pelmeni.forEach(pelmen => {
@@ -826,30 +715,35 @@ function draw() {
         }
     });
     
-    // Птицы
-    enemyBirds.forEach(bird => {
+    // 💩 Какашки
+    poops.forEach(poop => {
         ctx.save();
-        ctx.translate(bird.x + bird.width/2, bird.y + bird.height/2);
+        ctx.translate(poop.x + poop.width/2, poop.y + poop.height/2);
+        ctx.rotate(poop.rotation);
         
-        if (Math.sin(bird.float * 3) > 0) {
-            ctx.shadowColor = '#ff0000';
-            ctx.shadowBlur = 10;
+        // Мерцающий эффект для опасных какашек
+        if (Math.sin(poop.float * 3) > 0) {
+            ctx.shadowColor = '#8B4513';
+            ctx.shadowBlur = 15;
         }
         
-        const scaleY = 0.9 + Math.abs(Math.sin(bird.float)) * 0.2;
-        ctx.scale(1, scaleY);
-        ctx.drawImage(ENEMY_BIRD_IMG, -bird.width/2, -bird.height/2, bird.width, bird.height);
+        // Пульсация
+        const scale = 0.9 + Math.abs(Math.sin(poop.float)) * 0.2;
+        ctx.scale(scale, scale);
+        ctx.drawImage(POOP_IMG, -poop.width/2, -poop.height/2, poop.width, poop.height);
         ctx.restore();
         
-        if (bird.effect) {
-            const age = frames - bird.effectTime;
+        if (poop.effect) {
+            const age = frames - poop.effectTime;
             if (age < 30) {
                 ctx.save();
                 ctx.globalAlpha = 1 - age / 30;
-                ctx.fillStyle = '#FF0000';
-                ctx.font = 'bold 24px Arial';
+                ctx.fillStyle = '#8B4513';
+                ctx.font = 'bold 28px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(bird.effect, bird.x + bird.width/2, bird.y - age);
+                
+                // Эмодзи какашки рядом с текстом
+                ctx.fillText(`💩 ${poop.effect}`, poop.x + poop.width/2, poop.y - age - 10);
                 ctx.restore();
             }
         }
@@ -881,112 +775,38 @@ function draw() {
     
     ctx.restore();
     
-    // Аура щита вокруг козы
-    if (activeBonus === 'shawarma' && bonusTimer > 0) {
-        ctx.save();
-        
-        // Мерцающий эффект
-        const alpha = 0.3 + Math.sin(frames * 0.2) * 0.1;
-        ctx.globalAlpha = alpha;
-        
-        // Оранжевая аура
-        ctx.strokeStyle = SHAWARMA_BONUS.color;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(goat.x + goat.width/2, goat.y + goat.height/2, 
-                goat.width + 20, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Частицы ауры
-        for (let i = 0; i < 8; i++) {
-            const angle = (frames * 0.1 + i * Math.PI / 4) % (Math.PI * 2);
-            const px = goat.x + goat.width/2 + Math.cos(angle) * (goat.width + 25);
-            const py = goat.y + goat.height/2 + Math.sin(angle) * (goat.width + 25);
-            
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(px, py, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Таймер над козой
-        const secondsLeft = Math.ceil(bonusTimer / 60);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${secondsLeft}`, goat.x + goat.width/2, goat.y - 50);
-        
-        ctx.restore();
-    }
-    
     // ====================
-    // ПОПАП БОНУСА
+    // ИНФОРМАЦИЯ ОБ УРОВНЕ И СЛОЖНОСТИ
     // ====================
-    if (isBonusPopupActive) {
-        // Затемнение экрана
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Попап
-        const popupWidth = Math.min(400, canvas.width - 40);
-        const popupHeight = 300;
-        const popupX = (canvas.width - popupWidth) / 2;
-        const popupY = (canvas.height - popupHeight) / 2;
-        
-        // Фон попапа
-        ctx.fillStyle = '#1a1a5e';
-        ctx.fillRect(popupX, popupY, popupWidth, popupHeight);
-        ctx.strokeStyle = '#FF6B00';
-        ctx.lineWidth = 5;
-        ctx.strokeRect(popupX, popupY, popupWidth, popupHeight);
-        
-        // Заголовок
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 32px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🍔 ШАУРМА', canvas.width / 2, popupY + 60);
-        
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText('DARK SIDE', canvas.width / 2, popupY + 100);
-        
-        // Описание
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '20px Arial';
-        ctx.fillText('Энергетический щит активирован!', canvas.width / 2, popupY + 150);
-        
-        // Эффект
-        ctx.fillStyle = '#00FF00';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('5 секунд неуязвимости', canvas.width / 2, popupY + 190);
-        
-        // Таймер авто-продолжения
-        const timeLeft = Math.ceil(bonusPopupTime / 60);
-        ctx.fillStyle = '#FF8C00';
-        ctx.font = '18px Arial';
-        ctx.fillText(`Игра продолжится через: ${timeLeft}`, canvas.width / 2, popupY + 240);
-    }
-    
-    // ====================
-    // ИНФОРМАЦИЯ ОБ УРОВНЕ
-    // ====================
-    const infoHeight = 35;
+    const infoHeight = 50;
     const infoY = canvas.height - infoHeight - 10;
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(canvas.width - 160, infoY, 150, infoHeight);
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(canvas.width - 160, infoY, 150, infoHeight);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(canvas.width - 180, infoY, 170, infoHeight);
+    ctx.strokeStyle = '#8B4513'; // Коричневый
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvas.width - 180, infoY, 170, infoHeight);
     
     ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Уровень: ${currentLevel}`, canvas.width - 170, infoY + 15);
+    
+    ctx.fillStyle = currentLevel >= 5 ? '#FF4500' : '#00FF00'; // Красный на высоких уровнях
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, canvas.width - 170, infoY + 35);
+    
+    // Счётчик какашек в углу
+    ctx.fillStyle = 'rgba(139, 69, 19, 0.8)';
+    ctx.fillRect(10, 10, 150, 40);
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, 150, 40);
+    
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Уровень: ${currentLevel}`, canvas.width - 150, infoY + 15);
-    
-    ctx.fillStyle = '#00FF00';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, canvas.width - 150, infoY + 30);
+    ctx.fillText(`Очки: ${score}`, 20, 35);
     
     // Подсказка во время стартовой дуги
     if (isStartingArc) {
@@ -1007,8 +827,8 @@ function draw() {
         
         ctx.font = 'bold 24px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Коза летит по дуге...', canvas.width / 2, canvas.height / 2);
-        ctx.fillText('Нажми чтобы взлететь!', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Избегай какашек 💩', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('и собирай пельмени!', canvas.width / 2, canvas.height / 2 + 40);
         
         const progressWidth = 300;
         const progressX = (canvas.width - progressWidth) / 2;
@@ -1017,7 +837,7 @@ function draw() {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(progressX, progressY, progressWidth, 10);
         
-        ctx.fillStyle = '#FF8C00';
+        ctx.fillStyle = '#8B4513';
         ctx.fillRect(progressX, progressY, progressWidth * startArcProgress, 10);
         
         ctx.restore();
@@ -1027,14 +847,43 @@ function draw() {
     if (levelUpEffect > 0) {
         ctx.save();
         ctx.globalAlpha = Math.min(1, levelUpEffect / 30);
-        ctx.fillStyle = '#FFD700';
+        
+        // Разные сообщения для разных уровней
+        let levelMessage = `УРОВЕНЬ ${currentLevel}!`;
+        let speedMessage = `Скорость +25%`;
+        
+        if (currentLevel >= 5) {
+            levelMessage = `💀 УРОВЕНЬ ${currentLevel}!`;
+            speedMessage = `ОСТОРОЖНО!`;
+            ctx.fillStyle = '#FF4500';
+        } else {
+            ctx.fillStyle = '#FFD700';
+        }
+        
         ctx.font = 'bold 28px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`🚀 УРОВЕНЬ ${currentLevel}!`, canvas.width / 2, canvas.height / 4);
+        ctx.fillText(levelMessage, canvas.width / 2, canvas.height / 4);
         
         ctx.font = 'bold 20px Arial';
-        ctx.fillText(`Скорость +20%`, canvas.width / 2, canvas.height / 4 + 40);
+        ctx.fillText(speedMessage, canvas.width / 2, canvas.height / 4 + 40);
+        
+        // На высоких уровнях предупреждение о какашках
+        if (currentLevel >= 3) {
+            ctx.fillText(`Какашек стало больше!`, canvas.width / 2, canvas.height / 4 + 70);
+        }
+        
+        ctx.restore();
+    }
+    
+    // Предупреждение о высокой сложности
+    if (currentLevel >= 7) {
+        ctx.save();
+        ctx.globalAlpha = 0.5 + Math.sin(frames * 0.2) * 0.2;
+        ctx.fillStyle = '#FF0000';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('💀 ВЫСОКАЯ СЛОЖНОСТЬ!', canvas.width / 2, 60);
         ctx.restore();
     }
 }
@@ -1068,7 +917,7 @@ window.addEventListener('load', function() {
         tg.MainButton.show();
     }
     
-    console.log('Game loaded with AUTO SHAWARMA BONUS every 200 points!');
+    console.log('Game loaded with POOP enemies and increased difficulty!');
 });
 
 // Export functions for Telegram
