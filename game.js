@@ -1,5 +1,5 @@
 // ====================
-// КОЗА В НИЖНЕМ - БЕЗ ШАУРМЫ, С КАКАШКАМИ И УСЛОЖНЕНИЯМИ!
+// КОЗА В НИЖНЕМ - БЕЗ ШАУРМЫ, С КАКАШКАМИ И СЕРДЕЧКАМИ!
 // ====================
 
 // Telegram Web App Detection
@@ -90,9 +90,11 @@ let nextLevelAt = 150;
 let startArcProgress = 0;
 let isStartingArc = true;
 
-// Счетчик столкновений с какашками (для банкротства)
-let poopCollisions = 0;
-let lastCollisionFrame = 0;
+// СИСТЕМА ЖИЗНЕЙ
+let lives = 3; // Начинаем с 3 жизней
+let maxLives = 3; // Максимум жизней
+let lastLifeGainScore = 0; // Счет, когда в последний раз получали жизнь
+let lifeRegenInterval = 200; // Восстановление жизни каждые 200 очков
 
 // Сложность игры
 let gameDifficulty = {
@@ -206,6 +208,45 @@ function updateLevel() {
 }
 
 // ====================
+// СИСТЕМА ЖИЗНЕЙ
+// ====================
+
+function updateLives() {
+    // Проверяем, не пора ли восстановить жизнь
+    if (lives < maxLives && score - lastLifeGainScore >= lifeRegenInterval) {
+        lives++;
+        lastLifeGainScore = score;
+        
+        // Эффект при восстановлении жизни
+        lifeGainEffect = 60;
+        
+        if (isTelegram && navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+    }
+}
+
+function loseLife() {
+    if (lives > 0) {
+        lives--;
+        
+        if (isTelegram && navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+        }
+        
+        // Если жизни закончились - конец игры
+        if (lives <= 0) {
+            gameOver = true;
+            endGame("КОНЧИЛИСЬ ЖИЗНИ! 💔");
+            return true;
+        }
+    }
+    return false;
+}
+
+let lifeGainEffect = 0;
+
+// ====================
 // ПЛАВНЫЙ СТАРТ С ДУГОЙ
 // ====================
 
@@ -253,6 +294,7 @@ function saveScoreToTelegram(userScore) {
                     username: telegramUser.username || telegramUser.first_name || 'Игрок',
                     score: userScore,
                     level: currentLevel,
+                    lives: maxLives,
                     timestamp: new Date().toISOString()
                 }));
             }
@@ -359,8 +401,12 @@ function startGame() {
     nextLevelAt = 150;
     startArcProgress = 0;
     isStartingArc = true;
-    poopCollisions = 0;
-    lastCollisionFrame = 0;
+    
+    // Сброс жизней
+    lives = 3;
+    maxLives = 3;
+    lastLifeGainScore = 0;
+    lifeGainEffect = 0;
     
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
@@ -398,8 +444,12 @@ function resetGame() {
     levelUpEffect = 0;
     nextLevelAt = 150;
     isStartingArc = false;
-    poopCollisions = 0;
-    lastCollisionFrame = 0;
+    
+    // Сброс жизней
+    lives = 3;
+    maxLives = 3;
+    lastLifeGainScore = 0;
+    lifeGainEffect = 0;
     
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
@@ -486,19 +536,10 @@ function update() {
     }
     
     updateLevel();
+    updateLives();
     
     if (levelUpEffect > 0) levelUpEffect--;
-    
-    // БАНКРОТСТВО: смерть при 0 очков после частых столкновений
-    if (score <= 0 && poopCollisions >= 3 && (frames - lastCollisionFrame) < 180) {
-        gameOver = true;
-        endGame("БАНКРОТ! 💸\nСлишком много какашек при нуле очков!");
-        return;
-    }
-    
-    if (score > 50) {
-        poopCollisions = Math.max(0, poopCollisions - 1);
-    }
+    if (lifeGainEffect > 0) lifeGainEffect--;
     
     goat.velocity += goat.gravity;
     goat.y += goat.velocity;
@@ -584,13 +625,19 @@ function update() {
             goat.y + 15 < poop.y + poop.height) {
             
             poop.hit = true;
-            score += getPoopPoints();
-            if (score < 0) score = 0;
-            poop.effect = getPoopPoints();
-            poop.effectTime = frames;
             
-            poopCollisions++;
-            lastCollisionFrame = frames;
+            // Если у игрока есть очки - снимаем очки
+            if (score > 0) {
+                score += getPoopPoints();
+                if (score < 0) score = 0;
+                poop.effect = getPoopPoints();
+            } else {
+                // Если очков нет - отнимаем жизнь
+                poop.effect = "💔";
+                if (loseLife()) return; // Если жизни кончились - игра окончена
+            }
+            
+            poop.effectTime = frames;
             
             goat.velocity = -10;
             
@@ -663,7 +710,7 @@ function endGame(reason = "ИГРА ОКОНЧЕНА!") {
         levelInfo.innerHTML = `
             <p style="color:#FFD700; font-size:20px; margin-top:10px;">🏆 Достигнут уровень: ${currentLevel}</p>
             <p style="color:#8B4513; font-size:16px; margin-top:5px;">Избежано какашек: ${Math.floor(score/25)}</p>
-            <p style="color:#FF4500; font-size:16px; margin-top:5px;">Столкновений с какашками: ${poopCollisions}</p>
+            <p style="color:#FF4500; font-size:16px; margin-top:5px;">Осталось жизней: ${lives}</p>
             ${currentLevel >= 2 ? `<p style="color:#32CD32; font-size:14px; margin-top:5px;">Бонус за уровень: +${getPelmenPoints()} очков/пельмень</p>` : ''}
             ${currentLevel >= 3 ? `<p style="color:#FF0000; font-size:14px; margin-top:5px;">Штраф за уровень: ${getPoopPoints()} очков/какашка</p>` : ''}
         `;
@@ -751,10 +798,10 @@ function draw() {
             if (age < 30) {
                 ctx.save();
                 ctx.globalAlpha = 1 - age / 30;
-                ctx.fillStyle = '#8B4513';
+                ctx.fillStyle = poop.effect === "💔" ? '#FF0000' : '#8B4513';
                 ctx.font = 'bold 28px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(`💩 ${poop.effect}`, poop.x + poop.width/2, poop.y - age - 10);
+                ctx.fillText(poop.effect, poop.x + poop.width/2, poop.y - age - 10);
                 ctx.restore();
             }
         }
@@ -782,6 +829,101 @@ function draw() {
     
     ctx.restore();
     
+    // ====================
+    // ОТОБРАЖЕНИЕ ЖИЗНЕЙ (СЕРДЕЧЕК)
+    // ====================
+    const heartSize = 30;
+    const heartSpacing = 35;
+    const heartsX = 20;
+    const heartsY = 30;
+    
+    for (let i = 0; i < maxLives; i++) {
+        if (i < lives) {
+            // Полное сердце
+            ctx.fillStyle = '#FF0000';
+            ctx.strokeStyle = '#8B0000';
+            ctx.lineWidth = 2;
+        } else {
+            // Пустое сердце
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.strokeStyle = 'rgba(139, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+        }
+        
+        drawHeart(ctx, heartsX + i * heartSpacing, heartsY, heartSize);
+        
+        // Эффект при получении жизни
+        if (lifeGainEffect > 0 && i === lives - 1) {
+            const pulse = Math.sin(frames * 0.2) * 0.3 + 0.7;
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = '#FFD700';
+            drawHeart(ctx, heartsX + i * heartSpacing, heartsY, heartSize * 1.2);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    
+    // Индикатор восстановления жизни
+    if (lives < maxLives) {
+        const nextLifeProgress = (score - lastLifeGainScore) / lifeRegenInterval;
+        if (nextLifeProgress > 0) {
+            const progressWidth = 80;
+            const progressHeight = 8;
+            const progressX = heartsX + maxLives * heartSpacing + 10;
+            const progressY = heartsY + heartSize / 2 - progressHeight / 2;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(progressX, progressY, progressWidth, progressHeight);
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(progressX, progressY, progressWidth * Math.min(1, nextLifeProgress), progressHeight);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`+❤️ через ${lifeRegenInterval - (score - lastLifeGainScore)}`, progressX, progressY - 5);
+        }
+    }
+    
+    // Функция рисования сердца
+    function drawHeart(ctx, x, y, size) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        const topCurveHeight = size * 0.3;
+        ctx.moveTo(0, size/3);
+        // Верхняя левая кривая
+        ctx.bezierCurveTo(
+            0, -topCurveHeight,
+            -size/2, -topCurveHeight,
+            -size/2, size/3
+        );
+        // Нижняя левая кривая
+        ctx.bezierCurveTo(
+            -size/2, size/1.5,
+            0, size/1.2,
+            0, size
+        );
+        // Нижняя правая кривая
+        ctx.bezierCurveTo(
+            0, size/1.2,
+            size/2, size/1.5,
+            size/2, size/3
+        );
+        // Верхняя правая кривая
+        ctx.bezierCurveTo(
+            size/2, -topCurveHeight,
+            0, -topCurveHeight,
+            0, size/3
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+    
+    // ====================
+    // ИНФОРМАЦИЯ ОБ УРОВНЕ И СЛОЖНОСТИ
+    // ====================
     const infoHeight = 70;
     const infoY = canvas.height - infoHeight - 10;
     
@@ -833,9 +975,13 @@ function draw() {
         ctx.fillText('Избегай какашек 💩', canvas.width / 2, canvas.height / 2);
         ctx.fillText('и собирай пельмени!', canvas.width / 2, canvas.height / 2 + 40);
         
+        // Показываем информацию о жизнях в стартовом экране
+        ctx.fillText(`У тебя ${lives} ❤️`, canvas.width / 2, canvas.height / 2 + 80);
+        ctx.fillText(`Жизнь восстанавливается каждые ${lifeRegenInterval} очков`, canvas.width / 2, canvas.height / 2 + 110);
+        
         const progressWidth = 300;
         const progressX = (canvas.width - progressWidth) / 2;
-        const progressY = canvas.height / 2 + 80;
+        const progressY = canvas.height / 2 + 140;
         
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(progressX, progressY, progressWidth, 10);
@@ -889,25 +1035,25 @@ function draw() {
         ctx.fillStyle = '#FF0000';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('💀 ВЫСОКАЯ СЛОЖНОСТЬ!', canvas.width / 2, 60);
+        ctx.fillText('💀 ВЫСОКАЯ СЛОЖНОСТЬ!', canvas.width / 2, 100);
         
-        if (score <= 50) {
+        if (lives <= 1) {
             ctx.fillStyle = '#FF4500';
             ctx.font = 'bold 18px Arial';
-            ctx.fillText(`Осторожно! Меньше ${50 - score} до банкротства!`, canvas.width / 2, 90);
+            ctx.fillText(`Осторожно! Осталась ${lives} жизнь!`, canvas.width / 2, 130);
         }
         
         ctx.restore();
     }
     
-    if (score <= 30 && score > 0) {
+    if (score <= 30 && score > 0 && lives <= 1) {
         ctx.save();
         ctx.globalAlpha = 0.6 + Math.sin(frames * 0.1) * 0.2;
         ctx.fillStyle = '#FF4500';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`⚠️ НИЗКИЙ СЧЕТ: ${score}`, canvas.width / 2, 120);
-        ctx.fillText(`Столкновений: ${poopCollisions}/3`, canvas.width / 2, 150);
+        ctx.fillText(`⚠️ МАЛО ОЧКОВ: ${score}`, canvas.width / 2, 160);
+        ctx.fillText(`Осталось жизней: ${lives}`, canvas.width / 2, 190);
         ctx.restore();
     }
 }
@@ -969,14 +1115,12 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.MainButton.show();
     }
     
-    console.log('Игра загружена! Кнопки привязаны.');
+    console.log('Игра загружена! Система жизней активна.');
 });
 
 // ====================
 // ДОПОЛНИТЕЛЬНЫЕ ОБРАБОТЧИКИ
 // ====================
-
-// УБРАЛ старую привязку кнопок из середины кода!
 
 // Export functions for Telegram
 if (isTelegram) {
