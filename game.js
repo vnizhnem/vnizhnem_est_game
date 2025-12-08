@@ -66,7 +66,7 @@ GROUND_IMG.onerror = function() {
 const PELMEN_IMG = new Image();
 PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><ellipse cx="50" cy="30" rx="45" ry="25" fill="#FFD700" stroke="#b8860b" stroke-width="3"/></svg>`);
 
-// 💩 Эмодзи какашки
+// 💩 Какашки
 const POOP_IMG = new Image();
 POOP_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,20 C65,15 80,20 80,40 C80,60 65,75 50,80 C35,75 20,60 20,40 C20,20 35,15 50,20 Z" fill="#8B4513"/><ellipse cx="35" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="65" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#A0522D"/></svg>`);
 
@@ -659,7 +659,7 @@ function update() {
             // Эффект отталкивания
             goat.velocity = -8;
             
-            // ОБНОВЛЯЕМ СЧЕТ ТОЛЬКО ЗДЕСЬ
+            // ОБНОВЛЯЕМ СЧЕТ
             document.getElementById('score').textContent = score;
             
             if (isTelegram && navigator.vibrate) {
@@ -743,14 +743,6 @@ function draw() {
             ctx.rotate(Math.sin(pelmen.float) * 0.2);
             ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
             
-            // Стоимость пельменя на высоких уровнях
-            if (currentLevel >= 2) {
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`+${getPelmenPoints()}`, 0, -25);
-            }
-            
             ctx.restore();
         } else if (pelmen.effect) {
             const age = frames - pelmen.effectTime;
@@ -782,14 +774,6 @@ function draw() {
         const scale = 0.9 + Math.abs(Math.sin(poop.float)) * 0.2;
         ctx.scale(scale, scale);
         ctx.drawImage(POOP_IMG, -poop.width/2, -poop.height/2, poop.width, poop.height);
-        
-        // Штраф на высоких уровнях
-        if (currentLevel >= 3) {
-            ctx.fillStyle = '#8B4513';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${getPoopPoints()}`, 0, -30);
-        }
         
         ctx.restore();
         
@@ -835,30 +819,48 @@ function draw() {
     ctx.restore();
     
     // ====================
-    // ИНФОРМАЦИОННАЯ ПАНЕЛЬ (верх)
+    // ПАНЕЛЬ ИНФОРМАЦИИ (левый верхний угол)
     // ====================
-    const panelHeight = 50;
-    const panelY = 10;
+    const panelWidth = 120;
+    const panelX = 15;
+    const panelY = 15;
     
-    // Фон панели
+    // Фон панели очков
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, panelY, canvas.width - 20, panelHeight);
-    ctx.strokeStyle = '#8B4513';
+    ctx.fillRect(panelX, panelY, panelWidth, 60);
+    ctx.strokeStyle = '#FFD700'; // Золотая рамка
     ctx.lineWidth = 3;
-    ctx.strokeRect(10, panelY, canvas.width - 20, panelHeight);
+    ctx.strokeRect(panelX, panelY, panelWidth, 60);
     
-    // Счет по центру
+    // Очки
     ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`ОЧКИ: ${score}`, canvas.width / 2, panelY + panelHeight / 2);
+    ctx.fillText(score, panelX + panelWidth / 2, panelY + 25);
     
-    // Жизни слева
-    const heartSize = 25;
-    const heartSpacing = 30;
-    const heartsStartX = 30;
-    const heartsY = panelY + panelHeight / 2;
+    // Надпись "ОЧКИ" под цифрами
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('ОЧКИ', panelX + panelWidth / 2, panelY + 50);
+    
+    // ====================
+    // ПАНЕЛЬ ЖИЗНЕЙ (под очками)
+    // ====================
+    const livesPanelY = panelY + 75;
+    
+    // Фон панели жизней
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(panelX, livesPanelY, panelWidth, 50);
+    ctx.strokeStyle = '#FF0000'; // Красная рамка
+    ctx.lineWidth = 2;
+    ctx.strokeRect(panelX, livesPanelY, panelWidth, 50);
+    
+    // Сердечки
+    const heartSize = 20;
+    const heartSpacing = 25;
+    const heartsStartX = panelX + 25;
+    const heartsY = livesPanelY + 25;
     
     for (let i = 0; i < maxLives; i++) {
         if (i < lives) {
@@ -883,14 +885,26 @@ function draw() {
         }
     }
     
-    // Индикатор попаданий справа
-    const hitsX = canvas.width - 120;
-    const hitsY = panelY + panelHeight / 2;
+    // ====================
+    // ПАНЕЛЬ УРОВНЯ (правый верхний угол)
+    // ====================
+    const levelPanelWidth = 100;
+    const levelPanelX = canvas.width - levelPanelWidth - 15;
+    const levelPanelY = 15;
     
-    ctx.fillStyle = poopHits >= hitsToLoseLife - 1 ? '#FF4500' : '#FFFFFF';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`💩 ${poopHits}/${hitsToLoseLife}`, hitsX, hitsY);
+    // Фон панели уровня
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
+    ctx.strokeStyle = '#00FF00'; // Зеленая рамка
+    ctx.lineWidth = 2;
+    ctx.strokeRect(levelPanelX, levelPanelY, levelPanelWidth, 40);
+    
+    // Уровень
+    ctx.fillStyle = '#00FF00';
+    ctx.font = 'bold 22px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`LVL ${currentLevel}`, levelPanelX + levelPanelWidth / 2, levelPanelY + 20);
     
     // Функция рисования сердца
     function drawHeart(ctx, x, y, size) {
@@ -907,33 +921,6 @@ function draw() {
         ctx.fill();
         ctx.stroke();
         ctx.restore();
-    }
-    
-    // ====================
-    // ИНФОРМАЦИЯ ОБ УРОВНЕ (внизу)
-    // ====================
-    const infoHeight = 60;
-    const infoY = canvas.height - infoHeight - 10;
-    
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(canvas.width - 180, infoY, 170, infoHeight);
-    ctx.strokeStyle = '#8B4513';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(canvas.width - 180, infoY, 170, infoHeight);
-    
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Уровень: ${currentLevel}`, canvas.width - 170, infoY + 15);
-    
-    ctx.fillStyle = currentLevel >= 4 ? '#FF4500' : '#00FF00';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, canvas.width - 170, infoY + 35);
-    
-    if (currentLevel >= 2) {
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(`Пельмени: +${getPelmenPoints()}`, canvas.width - 170, infoY + 55);
     }
     
     // Стартовый экран
@@ -953,10 +940,10 @@ function draw() {
         
         ctx.fillText('ЛОВИ РИТМ!', canvas.width / 2, canvas.height / 2 - 40);
         
-        ctx.font = 'bold 24px Arial';
+        ctx.font = 'bold 22px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText('Избегай какашек 💩', canvas.width / 2, canvas.height / 2);
-        ctx.fillText('Собирай пельмени!', canvas.width / 2, canvas.height / 2 + 40);
+        ctx.fillText('Собирай пельмени!', canvas.width / 2, canvas.height / 2 + 35);
         
         const progressWidth = 300;
         const progressX = (canvas.width - progressWidth) / 2;
@@ -976,26 +963,14 @@ function draw() {
         ctx.save();
         ctx.globalAlpha = Math.min(1, levelUpEffect / 30);
         
-        let levelMessage = `УРОВЕНЬ ${currentLevel}!`;
-        
-        if (currentLevel >= 4) {
-            levelMessage = `💀 УРОВЕНЬ ${currentLevel}!`;
-            ctx.fillStyle = '#FF4500';
-        } else {
-            ctx.fillStyle = '#FFD700';
-        }
-        
+        ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 28px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(levelMessage, canvas.width / 2, canvas.height / 4);
+        ctx.fillText(`УРОВЕНЬ ${currentLevel}!`, canvas.width / 2, canvas.height / 4);
         
         ctx.font = 'bold 20px Arial';
         ctx.fillText(`Скорость +30%`, canvas.width / 2, canvas.height / 4 + 40);
-        
-        if (currentLevel >= 3) {
-            ctx.fillText(`Какашек стало больше!`, canvas.width / 2, canvas.height / 4 + 70);
-        }
         
         ctx.restore();
     }
@@ -1021,14 +996,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const restartBtn = document.getElementById('restartBtn');
     
     if (startBtn) {
-        console.log('Найдена кнопка startBtn, привязываю...');
         startBtn.addEventListener('click', startGame);
     } else {
         console.error('Кнопка startBtn не найдена!');
     }
     
     if (restartBtn) {
-        console.log('Найдена кнопка restartBtn, привязываю...');
         restartBtn.addEventListener('click', resetGame);
     }
     
@@ -1056,8 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isTelegram && tg && tg.MainButton) {
         tg.MainButton.show();
     }
-    
-    console.log('Игра загружена!');
 });
 
 // Export functions for Telegram
