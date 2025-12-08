@@ -356,28 +356,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Кнопки
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('restartBtn').addEventListener('click', resetGame);
-
-// Telegram buttons
-document.addEventListener('DOMContentLoaded', function() {
-    const shareBtn = document.getElementById('tgShareBtn');
-    if (shareBtn) shareBtn.addEventListener('click', shareGameTelegram);
-    
-    const channelBtn = document.getElementById('tgChannelBtn');
-    if (channelBtn) channelBtn.addEventListener('click', openTelegramChannel);
-    
-    if (isTelegram && telegramUser) {
-        const userId = telegramUser.id;
-        const storageKey = `tg_${userId}_best_score`;
-        const telegramBestScore = localStorage.getItem(storageKey) || 0;
-        
-        const currentHighScoreEl = document.getElementById('currentHighScore');
-        if (currentHighScoreEl) currentHighScoreEl.textContent = telegramBestScore;
-    }
-});
-
 // ====================
 // ИГРОВАЯ ЛОГИКА (УСЛОЖНЕННАЯ С ПРОПОРЦИОНАЛЬНОЙ СИСТЕМОЙ)
 // ====================
@@ -993,8 +971,11 @@ function gameLoop() {
     }
 }
 
-// Инициализация
-window.addEventListener('load', function() {
+// ====================
+// ИНИЦИАЛИЗАЦИЯ
+// ====================
+
+function initializeGame() {
     highScore = parseInt(localStorage.getItem('goatHighScore')) || 0;
     
     if (isTelegram && telegramUser) {
@@ -1012,8 +993,32 @@ window.addEventListener('load', function() {
         tg.MainButton.show();
     }
     
+    // Привязка кнопок после того, как функции определены
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    
+    if (startBtn) {
+        startBtn.addEventListener('click', startGame);
+    } else {
+        console.error('Кнопка startBtn не найдена!');
+    }
+    
+    if (restartBtn) {
+        restartBtn.addEventListener('click', resetGame);
+    }
+    
+    // Telegram buttons
+    const shareBtn = document.getElementById('tgShareBtn');
+    if (shareBtn) shareBtn.addEventListener('click', shareGameTelegram);
+    
+    const channelBtn = document.getElementById('tgChannelBtn');
+    if (channelBtn) channelBtn.addEventListener('click', openTelegramChannel);
+    
     console.log('Game loaded with POOP enemies, proportional system and bankruptcy mechanics!');
-});
+}
+
+// Запуск инициализации при загрузке страницы
+window.addEventListener('load', initializeGame);
 
 // Export functions for Telegram
 if (isTelegram) {
