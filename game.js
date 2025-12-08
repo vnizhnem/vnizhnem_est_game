@@ -796,18 +796,6 @@ function draw() {
     ctx.font = 'bold 16px Arial';
     ctx.fillText(`Скорость: x${speedMultiplier.toFixed(2)}`, canvas.width - 170, infoY + 35);
     
-    // Счётчик какашек в углу
-    ctx.fillStyle = 'rgba(139, 69, 19, 0.8)';
-    ctx.fillRect(10, 10, 150, 40);
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, 150, 40);
-    
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Очки: ${score}`, 20, 35);
-    
     // Подсказка во время стартовой дуги
     if (isStartingArc) {
         ctx.save();
