@@ -1,5 +1,5 @@
 // ====================
-// КОЗА В НИЖНЕМ - С КАКАШКАМИ И СЕРДЕЧКАМИ!
+// КОЗА В НИЖНЕМ - С КАКАШКАМИ И МОНЕТКАМИ!
 // ====================
 
 // Telegram Web App Detection
@@ -63,8 +63,9 @@ GROUND_IMG.onerror = function() {
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60"><defs><pattern id="grassPattern" width="50" height="60" patternUnits="userSpaceOnUse"><rect width="50" height="60" fill="#228B22"/><rect y="40" width="50" height="20" fill="#32CD32"/><circle cx="10" cy="45" r="3" fill="#228B22"/><circle cx="30" cy="48" r="2" fill="#228B22"/><circle cx="40" cy="46" r="4" fill="#228B22"/></pattern></defs><rect width="800" height="60" fill="url(#grassPattern)"/><rect y="55" width="800" height="5" fill="#1a5c1a"/></svg>`);
 };
 
-const PELMEN_IMG = new Image();
-PELMEN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><ellipse cx="50" cy="30" rx="45" ry="25" fill="#FFD700" stroke="#b8860b" stroke-width="3"/></svg>`);
+// МОНЕТКИ вместо пельменей
+const COIN_IMG = new Image();
+COIN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FFD700"/><circle cx="50" cy="50" r="40" fill="#FFA500"/><circle cx="50" cy="50" r="30" fill="#FFD700"/><text x="50" y="55" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="30" fill="#8B4513">$</text></svg>`);
 
 // 💩 Какашки
 const POOP_IMG = new Image();
@@ -98,6 +99,12 @@ let lastLifeGainScore = 0;
 let poopHits = 0;
 let hitsToLoseLife = 4;
 
+// СИСТЕМА ЗАЩИТЫ И КОМБО
+let defense = 0; // % защиты от урона (0-50%)
+let comboMultiplier = 1.0; // Множитель за комбо
+let coinsCollectedWithoutHit = 0; // Монеток собрано без столкновения
+let comboTime = 0; // Время действия комбо
+
 // Сложность игры
 let gameDifficulty = {
     gravity: isTelegram ? 0.45 : 0.5,
@@ -106,7 +113,7 @@ let gameDifficulty = {
     pipeMaxY: 450,
     birdSpawnChance: isTelegram ? 0.35 : 0.45,
     birdSpeed: isTelegram ? 2.5 : 3,
-    pelmenSpawnChance: 0.6
+    coinSpawnChance: 0.6
 };
 
 // Коза
@@ -133,21 +140,22 @@ const BENCH = {
     maxY: gameDifficulty.pipeMaxY
 };
 
-// Пельмени
-const PELMEN = {
+// МОНЕТКИ
+const COIN = {
     width: 35,
-    height: 20,
-    points: 15,
-    spawnChance: gameDifficulty.pelmenSpawnChance
+    height: 35,
+    basePoints: 15,
+    spawnChance: gameDifficulty.coinSpawnChance
 };
 
 // Какашки
 const POOP = {
     width: 50,
     height: 50,
-    points: -30,
+    basePoints: -30,
     baseSpawnChance: gameDifficulty.birdSpawnChance,
-    baseSpeed: gameDifficulty.birdSpeed
+    baseSpeed: gameDifficulty.birdSpeed,
+    maxDamage: -50 // Максимальный урон
 };
 
 // Земля
@@ -160,11 +168,11 @@ const ground = {
 
 // Массивы
 const benches = [];
-const pelmeni = [];
+const coins = [];
 const poops = [];
 
 // ====================
-// ФУНКЦИИ УРОВНЕЙ
+// БАЛАНСНЫЕ ФУНКЦИИ
 // ====================
 
 function getCurrentSpeed() {
@@ -172,45 +180,113 @@ function getCurrentSpeed() {
 }
 
 function getPoopSpawnChance() {
-    return POOP.baseSpawnChance + (currentLevel - 1) * 0.15;
+    // Медленнее растет частота спавна
+    return POOP.baseSpawnChance + (currentLevel - 1) * 0.1;
 }
 
 function getPoopSpeed() {
-    return POOP.baseSpeed * (1 + (currentLevel - 1) * 0.3);
+    return POOP.baseSpeed * (1 + (currentLevel - 1) * 0.2);
 }
 
-function getPelmenPoints() {
-    return PELMEN.points + Math.floor((currentLevel - 1) * 8);
+function getCoinPoints() {
+    // Увеличиваем награду за монетки на 20% за уровень
+    const base = COIN.basePoints;
+    const levelBonus = 1 + (currentLevel - 1) * 0.2;
+    const comboBonus = comboMultiplier;
+    return Math.floor(base * levelBonus * comboBonus);
 }
 
 function getPoopPoints() {
-    return POOP.points - Math.floor((currentLevel - 1) * 15);
+    // БАЛАНС: урон растет медленнее и имеет защиту
+    const baseDamage = POOP.basePoints;
+    const levelMultiplier = 1 + (currentLevel - 1) * 0.08; // +8% за уровень вместо +50%
+    const damage = baseDamage * levelMultiplier;
+    
+    // Защита: каждый 3 уровень уменьшает урон на 10%
+    const defenseBonus = Math.floor(currentLevel / 3) * 0.1;
+    const finalDamage = damage * (1 - defenseBonus);
+    
+    // Ограничиваем максимальный урон
+    return Math.max(POOP.maxDamage, Math.floor(finalDamage));
 }
 
 function getHitsToLoseLife() {
+    // Увеличиваем живучесть на высоких уровнях
     if (score < 100) return 4;
     if (score < 300) return 5;
     if (score < 600) return 6;
-    return 7;
+    if (score < 1000) return 7;
+    return 8;
 }
 
 function updateLevel() {
     if (score >= nextLevelAt) {
         currentLevel++;
-        speedMultiplier = 1.0 + (currentLevel - 1) * 0.3;
-        goat.gravity = gameDifficulty.gravity * (1 + (currentLevel - 1) * 0.15);
-        goat.jumpStrength = (isTelegram ? -9 : -8) * (1 - (currentLevel - 1) * 0.08);
-        nextLevelAt = 150 + (currentLevel - 1) * 100;
+        
+        // Более мягкий рост скорости
+        speedMultiplier = 1.0 + (currentLevel - 1) * 0.25;
+        
+        // Меньше увеличиваем гравитацию
+        goat.gravity = gameDifficulty.gravity * (1 + (currentLevel - 1) * 0.1);
+        
+        // Сохраняем силу прыжка
+        goat.jumpStrength = (isTelegram ? -9 : -8) * (1 - (currentLevel - 1) * 0.05);
+        
+        nextLevelAt = 150 + (currentLevel - 1) * 120;
         levelUpEffect = 90;
+        
+        // Награда за уровень: дополнительная жизнь каждые 3 уровня
+        if (currentLevel % 3 === 0 && lives < maxLives) {
+            lives++;
+            lifeGainEffect = 60;
+        }
         
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate([150, 80, 150, 80, 150]);
         }
         
-        if (Math.random() < 0.8) {
-            addPoop();
+        // Не спавним какашку при переходе уровня
+    }
+}
+
+// ====================
+// СИСТЕМА КОМБО И ЗАЩИТЫ
+// ====================
+
+function updateComboSystem() {
+    // Уменьшаем время комбо
+    if (comboTime > 0) {
+        comboTime--;
+        if (comboTime === 0) {
+            comboMultiplier = 1.0;
+            coinsCollectedWithoutHit = 0;
         }
     }
+    
+    // Обновляем защиту
+    defense = Math.floor(currentLevel / 3) * 0.1;
+}
+
+function addCombo() {
+    coinsCollectedWithoutHit++;
+    
+    // Каждые 3 монетки подряд дают комбо
+    if (coinsCollectedWithoutHit % 3 === 0) {
+        comboMultiplier = 1.5;
+        comboTime = 180; // 3 секунды при 60 FPS
+    }
+    
+    // Каждые 5 монеток подряд дают супер-комбо
+    if (coinsCollectedWithoutHit % 5 === 0) {
+        comboMultiplier = 2.0;
+        comboTime = 300; // 5 секунд
+    }
+}
+
+function resetCombo() {
+    coinsCollectedWithoutHit = 0;
+    comboMultiplier = 1.0;
+    comboTime = 0;
 }
 
 // ====================
@@ -218,7 +294,7 @@ function updateLevel() {
 // ====================
 
 function updateLives() {
-    // Восстановление жизни каждые 150 очков
+    // Восстановление жизни каждые 200 очков
     if (lives < maxLives && score - lastLifeGainScore >= lifeRegenInterval) {
         lives++;
         lastLifeGainScore = score;
@@ -236,6 +312,7 @@ function loseLife() {
     if (lives > 0) {
         lives--;
         poopHits = 0;
+        resetCombo(); // Сбрасываем комбо при потере жизни
         
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate([200, 100, 200]);
@@ -404,18 +481,20 @@ function startGame() {
     startArcProgress = 0;
     isStartingArc = true;
     
-    // Сброс жизней
+    // Сброс жизней и комбо
     lives = 3;
     lastLifeGainScore = 0;
     lifeGainEffect = 0;
     poopHits = 0;
     hitsToLoseLife = getHitsToLoseLife();
+    resetCombo();
+    defense = 0;
     
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
     
     benches.length = 0;
-    pelmeni.length = 0;
+    coins.length = 0;
     poops.length = 0;
     
     goat.y = canvas.height / 2;
@@ -425,7 +504,6 @@ function startGame() {
     
     frames = 0;
     
-    // ОДИН элемент для отображения счета
     document.getElementById('score').textContent = '0';
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
@@ -449,18 +527,20 @@ function resetGame() {
     nextLevelAt = 150;
     isStartingArc = false;
     
-    // Сброс жизней
+    // Сброс жизней и комбо
     lives = 3;
     lastLifeGainScore = 0;
     lifeGainEffect = 0;
     poopHits = 0;
     hitsToLoseLife = getHitsToLoseLife();
+    resetCombo();
+    defense = 0;
     
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
     
     benches.length = 0;
-    pelmeni.length = 0;
+    coins.length = 0;
     poops.length = 0;
     
     goat.y = canvas.height / 2;
@@ -484,7 +564,7 @@ function resetGame() {
 }
 
 function addBench() {
-    const benchHeight = BENCH.height + (currentLevel - 1) * 5;
+    const benchHeight = BENCH.height + (currentLevel - 1) * 3; // Меньше растет
     
     benches.push({
         x: canvas.width,
@@ -495,12 +575,12 @@ function addBench() {
     });
 }
 
-function addPelmen() {
-    pelmeni.push({
+function addCoin() {
+    coins.push({
         x: canvas.width + Math.random() * 100,
         y: Math.random() * (canvas.height - 300) + 150,
-        width: PELMEN.width,
-        height: PELMEN.height,
+        width: COIN.width,
+        height: COIN.height,
         collected: false,
         float: Math.random() * Math.PI * 2,
         type: 'good'
@@ -508,6 +588,10 @@ function addPelmen() {
 }
 
 function addPoop() {
+    // УМНЫЙ СПАВН: не спавним какашки, если игрок в опасности
+    if (lives === 1 && Math.random() < 0.7) return;
+    if (poops.length >= 3 && Math.random() < 0.6) return;
+    
     let targetY = goat.y;
     if (Math.random() < 0.4) {
         targetY = goat.y + (Math.random() * 100 - 50);
@@ -523,10 +607,10 @@ function addPoop() {
         hit: false,
         float: Math.random() * Math.PI * 2,
         type: 'bad',
-        speed: getPoopSpeed() + Math.random() * 1.0,
+        speed: getPoopSpeed() + Math.random() * 0.8,
         wave: Math.random() * Math.PI * 2,
         rotation: 0,
-        rotationSpeed: (Math.random() - 0.5) * 0.2
+        rotationSpeed: (Math.random() - 0.5) * 0.15
     });
 }
 
@@ -542,6 +626,7 @@ function update() {
     
     updateLevel();
     updateLives();
+    updateComboSystem();
     
     if (levelUpEffect > 0) levelUpEffect--;
     if (lifeGainEffect > 0) lifeGainEffect--;
@@ -588,34 +673,38 @@ function update() {
         }
     }
     
-    // Пельмени
-    for (let i = pelmeni.length - 1; i >= 0; i--) {
-        const pelmen = pelmeni[i];
-        pelmen.x -= currentSpeed;
-        pelmen.float += 0.05;
+    // МОНЕТКИ
+    for (let i = coins.length - 1; i >= 0; i--) {
+        const coin = coins[i];
+        coin.x -= currentSpeed;
+        coin.float += 0.05;
         
-        if (!pelmen.collected &&
-            goat.x + goat.width - 10 > pelmen.x &&
-            goat.x + 10 < pelmen.x + pelmen.width &&
-            goat.y + goat.height - 10 > pelmen.y &&
-            goat.y + 10 < pelmen.y + pelmen.height) {
+        if (!coin.collected &&
+            goat.x + goat.width - 10 > coin.x &&
+            goat.x + 10 < coin.x + coin.width &&
+            goat.y + goat.height - 10 > coin.y &&
+            goat.y + 10 < coin.y + coin.height) {
             
-            pelmen.collected = true;
-            score += getPelmenPoints();
-            pelmen.effect = '+' + getPelmenPoints();
-            pelmen.effectTime = frames;
+            coin.collected = true;
+            const points = getCoinPoints();
+            score += points;
+            coin.effect = '+' + points;
+            coin.effectTime = frames;
             
             document.getElementById('score').textContent = score;
+            
+            // Добавляем комбо
+            addCombo();
             
             if (isTelegram && navigator.vibrate && score % 50 === 0) {
                 navigator.vibrate([30, 30, 30]);
             }
         }
         
-        if (pelmen.x + pelmen.width < -50) pelmeni.splice(i, 1);
+        if (coin.x + coin.width < -50) coins.splice(i, 1);
     }
     
-    // Какашки - ИСПРАВЛЕННЫЙ КОД
+    // Какашки
     for (let i = poops.length - 1; i >= 0; i--) {
         const poop = poops[i];
         poop.x -= poop.speed;
@@ -632,17 +721,22 @@ function update() {
             
             poop.hit = true;
             
-            // ЛОГИКА СТОЛКНОВЕНИЯ - ИСПРАВЛЕНО
+            // БАЛАНСИРОВАННАЯ ЛОГИКА СТОЛКНОВЕНИЯ
             if (score <= 0) {
                 // Если очков нет - теряем жизнь
                 poop.effect = "💔";
-                if (loseLife()) return; // Проверяем, не кончились ли жизни
+                resetCombo(); // Сбрасываем комбо
+                if (loseLife()) return;
             } else {
-                // Если есть очки - снимаем очки
-                const pointsLost = getPoopPoints();
-                score += pointsLost;
+                // Если есть очки - снимаем очки (с учетом защиты)
+                const basePointsLost = getPoopPoints();
+                const actualPointsLost = Math.floor(basePointsLost * (1 - defense));
+                score += actualPointsLost;
                 if (score < 0) score = 0;
-                poop.effect = pointsLost;
+                poop.effect = actualPointsLost;
+                
+                // Сбрасываем комбо при любом столкновении
+                resetCombo();
                 
                 // Увеличиваем счетчик попаданий
                 poopHits++;
@@ -657,13 +751,13 @@ function update() {
             poop.effectTime = frames;
             
             // Эффект отталкивания
-            goat.velocity = -8;
+            goat.velocity = -7; // Меньше отталкивание
             
             // ОБНОВЛЯЕМ СЧЕТ
             document.getElementById('score').textContent = score;
             
             if (isTelegram && navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
+                navigator.vibrate([80, 40, 80]);
             }
         }
         
@@ -678,13 +772,13 @@ function update() {
     }
     
     // Спавн объектов
-    const spawnInterval = Math.max(50, 90 - (currentLevel - 1) * 12);
+    const spawnInterval = Math.max(60, 100 - (currentLevel - 1) * 8); // Медленнее спавн
     
     if (frames % spawnInterval === 0) {
         addBench();
         
-        if (Math.random() < (PELMEN.spawnChance - (currentLevel - 1) * 0.08)) {
-            addPelmen();
+        if (Math.random() < (COIN.spawnChance - (currentLevel - 1) * 0.05)) {
+            addCoin();
         }
         
         if (Math.random() < getPoopSpawnChance()) {
@@ -692,7 +786,8 @@ function update() {
         }
     }
     
-    if (frames % Math.max(30, 50 - (currentLevel - 1) * 8) === 0 && Math.random() < 0.5) {
+    // Дополнительные какашки (реже)
+    if (frames % Math.max(40, 60 - (currentLevel - 1) * 5) === 0 && Math.random() < 0.3) {
         addPoop();
     }
 }
@@ -735,24 +830,31 @@ function draw() {
     // Рисуем фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
     
-    // Пельмени
-    pelmeni.forEach(pelmen => {
-        if (!pelmen.collected) {
+    // МОНЕТКИ
+    coins.forEach(coin => {
+        if (!coin.collected) {
             ctx.save();
-            ctx.translate(pelmen.x + pelmen.width/2, pelmen.y + pelmen.height/2);
-            ctx.rotate(Math.sin(pelmen.float) * 0.2);
-            ctx.drawImage(PELMEN_IMG, -pelmen.width/2, -pelmen.height/2, pelmen.width, pelmen.height);
+            ctx.translate(coin.x + coin.width/2, coin.y + coin.height/2);
+            ctx.rotate(Math.sin(coin.float) * 0.3);
+            
+            // Эффект блеска
+            if (Math.sin(coin.float * 2) > 0) {
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+            }
+            
+            ctx.drawImage(COIN_IMG, -coin.width/2, -coin.height/2, coin.width, coin.height);
             
             ctx.restore();
-        } else if (pelmen.effect) {
-            const age = frames - pelmen.effectTime;
+        } else if (coin.effect) {
+            const age = frames - coin.effectTime;
             if (age < 30) {
                 ctx.save();
                 ctx.globalAlpha = 1 - age / 30;
                 ctx.fillStyle = '#FFD700';
                 ctx.font = 'bold 24px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText(pelmen.effect, pelmen.x + pelmen.width/2, pelmen.y - age);
+                ctx.fillText(coin.effect, coin.x + coin.width/2, coin.y - age);
                 ctx.restore();
             }
         }
@@ -806,6 +908,15 @@ function draw() {
     ctx.save();
     ctx.translate(goat.x + goat.width/2, goat.y + goat.height/2);
     ctx.rotate(goat.rotation);
+    
+    // Эффект комбо
+    if (comboMultiplier > 1.0) {
+        const pulse = Math.sin(frames * 0.2) * 0.3 + 0.7;
+        ctx.globalAlpha = pulse;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 20;
+    }
+    
     ctx.drawImage(BIRD_IMG, -goat.width/2, -goat.height/2, goat.width, goat.height);
     
     // Корона для Telegram
@@ -903,6 +1014,30 @@ function draw() {
         ctx.restore();
     }
     
+    // Отображение комбо
+    if (comboMultiplier > 1.0) {
+        ctx.save();
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`КОМБО x${comboMultiplier.toFixed(1)}`, canvas.width / 2, 30);
+        
+        // Прогресс-бар комбо
+        const barWidth = 200;
+        const barX = (canvas.width - barWidth) / 2;
+        const barY = 50;
+        const barHeight = 8;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(barX, barY, barWidth * (comboTime / 300), barHeight);
+        
+        ctx.restore();
+    }
+    
     // Стартовый экран
     if (isStartingArc) {
         ctx.save();
@@ -923,7 +1058,7 @@ function draw() {
         ctx.font = 'bold 22px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText('Избегай какашек 💩', canvas.width / 2, canvas.height / 2);
-        ctx.fillText('Собирай пельмени!', canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillText('Собирай монетки $!', canvas.width / 2, canvas.height / 2 + 35);
         
         const progressWidth = 300;
         const progressX = (canvas.width - progressWidth) / 2;
@@ -949,8 +1084,18 @@ function draw() {
         ctx.textBaseline = 'middle';
         ctx.fillText(`УРОВЕНЬ ${currentLevel}!`, canvas.width / 2, canvas.height / 4);
         
-        ctx.font = 'bold 20px Arial';
-        ctx.fillText(`Скорость +30%`, canvas.width / 2, canvas.height / 4 + 40);
+        // Показываем бонусы за уровень
+        const bonusText = [];
+        if (defense > 0) bonusText.push(`Защита +${Math.floor(defense * 100)}%`);
+        if (currentLevel % 3 === 0) bonusText.push(`+1 Жизнь`);
+        
+        if (bonusText.length > 0) {
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(bonusText.join(' | '), canvas.width / 2, canvas.height / 4 + 40);
+        } else {
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(`Скорость +25%`, canvas.width / 2, canvas.height / 4 + 40);
+        }
         
         ctx.restore();
     }
@@ -1001,6 +1146,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('currentHighScore').textContent = telegramBestScore;
     } else {
         document.getElementById('currentHighScore').textContent = highScore;
+    }
+    
+    // Обновляем текст на стартовом экране
+    const instructions = document.querySelectorAll('.instruction');
+    if (instructions.length > 1) {
+        instructions[0].textContent = 'Избегай какашек 💩';
+        instructions[1].textContent = 'Собирай монетки $!';
     }
     
     resizeCanvas();
