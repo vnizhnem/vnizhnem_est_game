@@ -63,9 +63,9 @@ GROUND_IMG.onerror = function() {
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60"><defs><pattern id="grassPattern" width="50" height="60" patternUnits="userSpaceOnUse"><rect width="50" height="60" fill="#228B22"/><rect y="40" width="50" height="20" fill="#32CD32"/><circle cx="10" cy="45" r="3" fill="#228B22"/><circle cx="30" cy="48" r="2" fill="#228B22"/><circle cx="40" cy="46" r="4" fill="#228B22"/></pattern></defs><rect width="800" height="60" fill="url(#grassPattern)"/><rect y="55" width="800" height="5" fill="#1a5c1a"/></svg>`);
 };
 
-// МОНЕТКИ вместо пельменей
+// МОНЕТКИ с РУБЛЯМИ ₽
 const COIN_IMG = new Image();
-COIN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FFD700"/><circle cx="50" cy="50" r="40" fill="#FFA500"/><circle cx="50" cy="50" r="30" fill="#FFD700"/><text x="50" y="55" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="30" fill="#8B4513">$</text></svg>`);
+COIN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FFD700"/><circle cx="50" cy="50" r="40" fill="#FFA500"/><circle cx="50" cy="50" r="30" fill="#FFD700"/><text x="50" y="55" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="30" fill="#8B4513">₽</text></svg>`);
 
 // 💩 Какашки
 const POOP_IMG = new Image();
@@ -140,7 +140,7 @@ const BENCH = {
     maxY: gameDifficulty.pipeMaxY
 };
 
-// МОНЕТКИ
+// МОНЕТКИ с рублями
 const COIN = {
     width: 35,
     height: 35,
@@ -235,7 +235,7 @@ function updateLevel() {
         nextLevelAt = 150 + (currentLevel - 1) * 120;
         levelUpEffect = 90;
         
-        // Награда за уровень: дополнительная жизнь каждые 3 уровня
+        // Награда за уровень: дополнительная жизнь каждые 3 уровень
         if (currentLevel % 3 === 0 && lives < maxLives) {
             lives++;
             lifeGainEffect = 60;
@@ -673,7 +673,7 @@ function update() {
         }
     }
     
-    // МОНЕТКИ
+    // МОНЕТКИ с рублями
     for (let i = coins.length - 1; i >= 0; i--) {
         const coin = coins[i];
         coin.x -= currentSpeed;
@@ -830,7 +830,7 @@ function draw() {
     // Рисуем фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
     
-    // МОНЕТКИ
+    // МОНЕТКИ с рублями
     coins.forEach(coin => {
         if (!coin.collected) {
             ctx.save();
@@ -1058,7 +1058,7 @@ function draw() {
         ctx.font = 'bold 22px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText('Избегай какашек 💩', canvas.width / 2, canvas.height / 2);
-        ctx.fillText('Собирай монетки $!', canvas.width / 2, canvas.height / 2 + 35);
+        ctx.fillText('Собирай монетки ₽!', canvas.width / 2, canvas.height / 2 + 35);
         
         const progressWidth = 300;
         const progressX = (canvas.width - progressWidth) / 2;
@@ -1148,12 +1148,20 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('currentHighScore').textContent = highScore;
     }
     
-    // Обновляем текст на стартовом экране
+    // Обновляем текст на стартовом экране (если есть элементы)
     const instructions = document.querySelectorAll('.instruction');
     if (instructions.length > 1) {
         instructions[0].textContent = 'Избегай какашек 💩';
-        instructions[1].textContent = 'Собирай монетки $!';
+        instructions[1].textContent = 'Собирай монетки ₽!';
     }
+    
+    // Обновляем текст в HTML если есть
+    const coinTexts = document.querySelectorAll('.coin-text');
+    coinTexts.forEach(el => {
+        if (el.textContent.includes('$') || el.textContent.includes('пельмен')) {
+            el.textContent = el.textContent.replace('$', '₽').replace('пельмени', 'монетки');
+        }
+    });
     
     resizeCanvas();
     draw();
