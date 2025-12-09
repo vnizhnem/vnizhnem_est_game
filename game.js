@@ -2,8 +2,11 @@
 // КОЗА В НИЖНЕМ - С КАКАШКАМИ И МОНЕТКАМИ!
 // ====================
 
+console.log('Игра загружается...');
+
 // Telegram Web App Detection
 const isTelegram = typeof window.Telegram !== 'undefined' && window.Telegram.WebApp;
+console.log('isTelegram:', isTelegram);
 
 // Telegram variables
 let tg = null;
@@ -12,6 +15,7 @@ let telegramUser = null;
 if (isTelegram) {
     tg = window.Telegram.WebApp;
     telegramUser = tg.initDataUnsafe?.user;
+    console.log('Telegram WebApp инициализирован');
     
     tg.expand();
     tg.setHeaderColor('#0a1538');
@@ -21,18 +25,53 @@ if (isTelegram) {
 }
 
 const canvas = document.getElementById('canvas');
+console.log('Canvas элемент:', canvas);
+
+if (!canvas) {
+    console.error('ОШИБКА: Canvas элемент не найден!');
+    // Создаем тестовый canvas если нет
+    const canvasContainer = document.getElementById('game');
+    if (canvasContainer) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'canvas';
+        canvasContainer.appendChild(canvas);
+        console.log('Создан новый canvas элемент');
+    }
+}
+
 const ctx = canvas.getContext('2d');
+if (!ctx) {
+    console.error('ОШИБКА: Не удалось получить контекст 2D');
+}
+
+// Проверяем размеры canvas
+console.log('Canvas начальные размеры:', canvas.width, 'x', canvas.height);
 
 // Размеры канваса
 function resizeCanvas() {
     const gameContainer = document.getElementById('game');
-    canvas.width = gameContainer.clientWidth;
-    canvas.height = gameContainer.clientHeight;
+    console.log('Game container:', gameContainer);
     
-    ground.y = canvas.height - ground.height;
+    if (!gameContainer) {
+        console.error('ОШИБКА: Контейнер игры не найден');
+        return;
+    }
+    
+    const containerWidth = gameContainer.clientWidth;
+    const containerHeight = gameContainer.clientHeight;
+    console.log('Размеры контейнера:', containerWidth, 'x', containerHeight);
+    
+    canvas.width = containerWidth;
+    canvas.height = containerHeight;
+    
+    console.log('Canvas новые размеры:', canvas.width, 'x', canvas.height);
+    
+    if (ground) {
+        ground.y = canvas.height - ground.height;
+    }
     
     if (!gameStarted || gameOver) {
-        goat.y = canvas.height / 2;
+        if (goat) goat.y = canvas.height / 2;
     }
 }
 
@@ -41,35 +80,57 @@ window.addEventListener('resize', resizeCanvas);
 // Изображения
 const BIRD_IMG = new Image();
 BIRD_IMG.src = 'bird.png';
+BIRD_IMG.onload = function() {
+    console.log('Изображение козы загружено');
+};
 BIRD_IMG.onerror = function() {
+    console.log('Используется SVG для козы');
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#8B4513"/><circle cx="30" cy="40" r="10" fill="#8B4513"/><circle cx="70" cy="40" r="10" fill="#8B4513"/><ellipse cx="50" cy="70" rx="20" ry="15" fill="#8B4513"/><circle cx="40" cy="80" r="5" fill="#FFD700"/><circle cx="60" cy="80" r="5" fill="#FFD700"/><polygon points="40,25 45,15 50,25" fill="#FF0000"/><polygon points="50,25 55,15 60,25" fill="#FF0000"/></svg>`);
 };
 
 const PIPE_IMG = new Image();
 PIPE_IMG.src = 'pipe.png';
+PIPE_IMG.onload = function() {
+    console.log('Изображение лавочки загружено');
+};
 PIPE_IMG.onerror = function() {
+    console.log('Используется SVG для лавочки');
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><rect x="0" y="0" width="100" height="60" fill="#8B4513"/><rect x="10" y="10" width="80" height="10" fill="#A0522D"/><rect x="20" y="25" width="60" height="10" fill="#A0522D"/></svg>`);
 };
 
 const BG_IMG = new Image();
 BG_IMG.src = 'background.png';
+BG_IMG.onload = function() {
+    console.log('Изображение фона загружено');
+};
 BG_IMG.onerror = function() {
+    console.log('Используется SVG для фона');
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#87CEEB"/><stop offset="100%" style="stop-color:#1E90FF"/></linearGradient></defs><rect width="800" height="600" fill="url(#bg)"/><circle cx="100" cy="100" r="40" fill="#FFD700" opacity="0.8"/><circle cx="300" cy="150" r="30" fill="#FFD700" opacity="0.6"/></svg>`);
 };
 
 const GROUND_IMG = new Image();
 GROUND_IMG.src = 'ground.png';
+GROUND_IMG.onload = function() {
+    console.log('Изображение земли загружено');
+};
 GROUND_IMG.onerror = function() {
+    console.log('Используется SVG для земли');
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60"><defs><pattern id="grassPattern" width="50" height="60" patternUnits="userSpaceOnUse"><rect width="50" height="60" fill="#228B22"/><rect y="40" width="50" height="20" fill="#32CD32"/><circle cx="10" cy="45" r="3" fill="#228B22"/><circle cx="30" cy="48" r="2" fill="#228B22"/><circle cx="40" cy="46" r="4" fill="#228B22"/></pattern></defs><rect width="800" height="60" fill="url(#grassPattern)"/><rect y="55" width="800" height="5" fill="#1a5c1a"/></svg>`);
 };
 
 // МОНЕТКИ вместо пельменей
 const COIN_IMG = new Image();
 COIN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FFD700"/><circle cx="50" cy="50" r="40" fill="#FFA500"/><circle cx="50" cy="50" r="30" fill="#FFD700"/><text x="50" y="55" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="30" fill="#8B4513">₽</text></svg>`);
+COIN_IMG.onload = function() {
+    console.log('Изображение монетки загружено');
+};
 
 // 💩 Какашки
 const POOP_IMG = new Image();
 POOP_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,20 C65,15 80,20 80,40 C80,60 65,75 50,80 C35,75 20,60 20,40 C20,20 35,15 50,20 Z" fill="#8B4513"/><ellipse cx="35" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="65" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#A0522D"/></svg>`);
+POOP_IMG.onload = function() {
+    console.log('Изображение какашки загружено');
+};
 
 // ====================
 // ИГРОВЫЕ ПЕРЕМЕННЫЕ
@@ -418,7 +479,10 @@ function openTelegramChannel() {
 // ====================
 
 function handleJump() {
+    console.log('Прыжок! gameStarted:', gameStarted, 'gameOver:', gameOver);
+    
     if (!gameStarted) {
+        console.log('Запуск игры...');
         startGame();
     } else if (!gameOver) {
         if (isStartingArc) {
@@ -432,11 +496,14 @@ function handleJump() {
             navigator.vibrate(50);
         }
     } else {
+        console.log('Перезапуск игры...');
         resetGame();
     }
 }
 
 function handleGameClick(e) {
+    console.log('Клик по игре');
+    
     if (e.target.closest('.telegram-button') || e.target.closest('.telegram-footer') ||
         e.target.closest('.tg-share-button') || e.target.closest('.tg-channel-button') ||
         e.target.id === 'startBtn' || e.target.id === 'restartBtn' ||
@@ -471,6 +538,8 @@ document.addEventListener('keydown', function(e) {
 // ====================
 
 function startGame() {
+    console.log('=== START GAME ===');
+    
     gameStarted = true;
     gameOver = false;
     score = 0;
@@ -504,9 +573,16 @@ function startGame() {
     
     frames = 0;
     
-    document.getElementById('score').textContent = '0';
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('gameOverScreen').style.display = 'none';
+    // Обновляем интерфейс
+    const scoreElement = document.getElementById('score');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    
+    if (scoreElement) scoreElement.textContent = '0';
+    if (startScreen) startScreen.style.display = 'none';
+    if (gameOverScreen) gameOverScreen.style.display = 'none';
+    
+    console.log('Интерфейс обновлен');
     
     resizeCanvas();
     
@@ -514,10 +590,13 @@ function startGame() {
         tg.MainButton.show();
     }
     
+    console.log('Запуск игрового цикла...');
     gameLoop();
 }
 
 function resetGame() {
+    console.log('=== RESET GAME ===');
+    
     gameOver = false;
     gameStarted = false;
     score = 0;
@@ -549,18 +628,26 @@ function resetGame() {
     
     resizeCanvas();
     
-    document.getElementById('gameOverScreen').style.display = 'none';
-    document.getElementById('startScreen').style.display = 'flex';
-    document.getElementById('score').textContent = '0';
+    // Обновляем интерфейс
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const startScreen = document.getElementById('startScreen');
+    const scoreElement = document.getElementById('score');
+    const currentHighScoreElement = document.getElementById('currentHighScore');
+    
+    if (gameOverScreen) gameOverScreen.style.display = 'none';
+    if (startScreen) startScreen.style.display = 'flex';
+    if (scoreElement) scoreElement.textContent = '0';
     
     if (isTelegram && telegramUser) {
         const userId = telegramUser.id;
         const storageKey = `tg_${userId}_best_score`;
         const telegramBestScore = localStorage.getItem(storageKey) || 0;
-        document.getElementById('currentHighScore').textContent = telegramBestScore;
+        if (currentHighScoreElement) currentHighScoreElement.textContent = telegramBestScore;
     } else {
-        document.getElementById('currentHighScore').textContent = highScore;
+        if (currentHighScoreElement) currentHighScoreElement.textContent = highScore;
     }
+    
+    console.log('Игра сброшена');
 }
 
 function addBench() {
@@ -656,7 +743,8 @@ function update() {
         if (!bench.passed && bench.x + bench.width < goat.x) {
             bench.passed = true;
             score += 5;
-            document.getElementById('score').textContent = score;
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) scoreElement.textContent = score;
             
             if (benches.length < 3) addBench();
         }
@@ -691,7 +779,8 @@ function update() {
             coin.effect = '+' + points;
             coin.effectTime = frames;
             
-            document.getElementById('score').textContent = score;
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) scoreElement.textContent = score;
             
             // Добавляем комбо
             addCombo();
@@ -754,7 +843,8 @@ function update() {
             goat.velocity = -7; // Меньше отталкивание
             
             // ОБНОВЛЯЕМ СЧЕТ
-            document.getElementById('score').textContent = score;
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) scoreElement.textContent = score;
             
             if (isTelegram && navigator.vibrate) {
                 navigator.vibrate([80, 40, 80]);
@@ -793,6 +883,8 @@ function update() {
 }
 
 function endGame(reason = "ИГРА ОКОНЧЕНА!") {
+    console.log('=== END GAME ===', reason);
+    
     gameOver = true;
     
     if (score > highScore) {
@@ -802,12 +894,22 @@ function endGame(reason = "ИГРА ОКОНЧЕНА!") {
     
     if (isTelegram && telegramUser) saveScoreToTelegram(score);
     
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('highScore').textContent = Math.max(highScore, 
-        isTelegram && telegramUser ? localStorage.getItem(`tg_${telegramUser.id}_best_score`) || 0 : highScore
-    );
+    const finalScoreElement = document.getElementById('finalScore');
+    const highScoreElement = document.getElementById('highScore');
+    const gameOverScreen = document.getElementById('gameOverScreen');
     
-    document.getElementById('gameOverScreen').style.display = 'flex';
+    if (finalScoreElement) finalScoreElement.textContent = score;
+    
+    let displayHighScore = highScore;
+    if (isTelegram && telegramUser) {
+        const userId = telegramUser.id;
+        const storageKey = `tg_${userId}_best_score`;
+        const telegramBestScore = localStorage.getItem(storageKey) || 0;
+        displayHighScore = Math.max(highScore, telegramBestScore);
+    }
+    
+    if (highScoreElement) highScoreElement.textContent = displayHighScore;
+    if (gameOverScreen) gameOverScreen.style.display = 'flex';
     
     if (isTelegram && navigator.vibrate) {
         navigator.vibrate([300, 100, 300]);
@@ -819,7 +921,27 @@ function endGame(reason = "ИГРА ОКОНЧЕНА!") {
 // ====================
 
 function draw() {
+    // Проверяем контекст
+    if (!ctx) {
+        console.error('Нет контекста для рисования');
+        return;
+    }
+    
+    // Очищаем canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Проверяем размеры canvas
+    if (canvas.width === 0 || canvas.height === 0) {
+        console.warn('Canvas имеет нулевые размеры');
+        // Рисуем сообщение об ошибке
+        ctx.fillStyle = 'red';
+        ctx.fillRect(0, 0, 300, 100);
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText('Canvas не инициализирован', 10, 30);
+        ctx.fillText('Проверьте HTML структуру', 10, 50);
+        return;
+    }
     
     // Фон с эффектом уровня
     if (levelUpEffect > 0 && levelUpEffect % 10 < 5) {
@@ -828,11 +950,17 @@ function draw() {
     }
     
     // Рисуем фон
-    ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
+    if (BG_IMG.complete) {
+        ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
+    } else {
+        // Запасной фон если изображение не загружено
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     
     // МОНЕТКИ
     coins.forEach(coin => {
-        if (!coin.collected) {
+        if (!coin.collected && COIN_IMG.complete) {
             ctx.save();
             ctx.translate(coin.x + coin.width/2, coin.y + coin.height/2);
             ctx.rotate(Math.sin(coin.float) * 0.3);
@@ -862,72 +990,92 @@ function draw() {
     
     // Какашки
     poops.forEach(poop => {
-        ctx.save();
-        ctx.translate(poop.x + poop.width/2, poop.y + poop.height/2);
-        ctx.rotate(poop.rotation);
-        
-        // Мерцание
-        if (Math.sin(poop.float * 3) > 0) {
-            ctx.shadowColor = '#8B4513';
-            ctx.shadowBlur = 15;
-        }
-        
-        // Пульсация
-        const scale = 0.9 + Math.abs(Math.sin(poop.float)) * 0.2;
-        ctx.scale(scale, scale);
-        ctx.drawImage(POOP_IMG, -poop.width/2, -poop.height/2, poop.width, poop.height);
-        
-        ctx.restore();
-        
-        // Эффект при попадании
-        if (poop.effect) {
-            const age = frames - poop.effectTime;
-            if (age < 30) {
-                ctx.save();
-                ctx.globalAlpha = 1 - age / 30;
-                ctx.fillStyle = poop.effect === "💔" ? '#FF0000' : '#8B4513';
-                ctx.font = 'bold 28px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(poop.effect, poop.x + poop.width/2, poop.y - age - 10);
-                ctx.restore();
+        if (POOP_IMG.complete) {
+            ctx.save();
+            ctx.translate(poop.x + poop.width/2, poop.y + poop.height/2);
+            ctx.rotate(poop.rotation);
+            
+            // Мерцание
+            if (Math.sin(poop.float * 3) > 0) {
+                ctx.shadowColor = '#8B4513';
+                ctx.shadowBlur = 15;
+            }
+            
+            // Пульсация
+            const scale = 0.9 + Math.abs(Math.sin(poop.float)) * 0.2;
+            ctx.scale(scale, scale);
+            ctx.drawImage(POOP_IMG, -poop.width/2, -poop.height/2, poop.width, poop.height);
+            
+            ctx.restore();
+            
+            // Эффект при попадании
+            if (poop.effect) {
+                const age = frames - poop.effectTime;
+                if (age < 30) {
+                    ctx.save();
+                    ctx.globalAlpha = 1 - age / 30;
+                    ctx.fillStyle = poop.effect === "💔" ? '#FF0000' : '#8B4513';
+                    ctx.font = 'bold 28px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(poop.effect, poop.x + poop.width/2, poop.y - age - 10);
+                    ctx.restore();
+                }
             }
         }
     });
     
     // Земля
-    for (let i = 0; i <= Math.ceil(canvas.width / canvas.width) + 1; i++) {
-        ctx.drawImage(GROUND_IMG, ground.x + i * canvas.width, ground.y, canvas.width + 2, ground.height);
+    if (GROUND_IMG.complete) {
+        for (let i = 0; i <= Math.ceil(canvas.width / canvas.width) + 1; i++) {
+            ctx.drawImage(GROUND_IMG, ground.x + i * canvas.width, ground.y, canvas.width + 2, ground.height);
+        }
+    } else {
+        // Запасная земля
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(0, ground.y, canvas.width, ground.height);
     }
     
     // Лавочки
     benches.forEach(bench => {
-        ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
+        if (PIPE_IMG.complete) {
+            ctx.drawImage(PIPE_IMG, bench.x, bench.y, bench.width, bench.height);
+        } else {
+            // Запасная лавочка
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(bench.x, bench.y, bench.width, bench.height);
+        }
     });
     
     // Коза
-    ctx.save();
-    ctx.translate(goat.x + goat.width/2, goat.y + goat.height/2);
-    ctx.rotate(goat.rotation);
-    
-    // Эффект комбо
-    if (comboMultiplier > 1.0) {
-        const pulse = Math.sin(frames * 0.2) * 0.3 + 0.7;
-        ctx.globalAlpha = pulse;
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 20;
+    if (BIRD_IMG.complete) {
+        ctx.save();
+        ctx.translate(goat.x + goat.width/2, goat.y + goat.height/2);
+        ctx.rotate(goat.rotation);
+        
+        // Эффект комбо
+        if (comboMultiplier > 1.0) {
+            const pulse = Math.sin(frames * 0.2) * 0.3 + 0.7;
+            ctx.globalAlpha = pulse;
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+        }
+        
+        ctx.drawImage(BIRD_IMG, -goat.width/2, -goat.height/2, goat.width, goat.height);
+        
+        // Корона для Telegram
+        if (isTelegram && telegramUser && score > 100) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('👑', 0, -40);
+        }
+        
+        ctx.restore();
+    } else {
+        // Запасная коза
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(goat.x, goat.y, goat.width, goat.height);
     }
-    
-    ctx.drawImage(BIRD_IMG, -goat.width/2, -goat.height/2, goat.width, goat.height);
-    
-    // Корона для Telegram
-    if (isTelegram && telegramUser && score > 100) {
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('👑', 0, -40);
-    }
-    
-    ctx.restore();
     
     // ====================
     // НИЖНЯЯ ПАНЕЛЬ (GROUND) С УРОВНЕМ И ЖИЗНЯМИ
@@ -935,7 +1083,6 @@ function draw() {
     
     // Фон для нижней панели (ground)
     const groundPanelY = ground.y;
-    const groundPanelHeight = 60;
     
     // Рисуем уровень на нижней панели (левый нижний угол)
     const levelPanelWidth = 100;
@@ -1103,11 +1250,17 @@ function draw() {
 
 // Игровой цикл
 function gameLoop() {
-    update();
-    draw();
-    
-    if (gameStarted && !gameOver) {
-        requestAnimationFrame(gameLoop);
+    try {
+        update();
+        draw();
+        
+        if (gameStarted && !gameOver) {
+            requestAnimationFrame(gameLoop);
+        }
+    } catch (error) {
+        console.error('Ошибка в игровом цикле:', error);
+        // Останавливаем игру при ошибке
+        gameOver = true;
     }
 }
 
@@ -1116,36 +1269,64 @@ function gameLoop() {
 // ====================
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация игры...');
+    
+    // Проверяем элементы интерфейса
+    const elementsToCheck = [
+        'startBtn', 'restartBtn', 'tgShareBtn', 'tgChannelBtn',
+        'score', 'finalScore', 'highScore', 'currentHighScore',
+        'startScreen', 'gameOverScreen'
+    ];
+    
+    elementsToCheck.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`Элемент ${id}:`, element ? 'найден' : 'НЕ НАЙДЕН');
+    });
+    
     // Привязка игровых кнопок
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
     
     if (startBtn) {
         startBtn.addEventListener('click', startGame);
+        console.log('Кнопка старта привязана');
     } else {
         console.error('Кнопка startBtn не найдена!');
     }
     
     if (restartBtn) {
         restartBtn.addEventListener('click', resetGame);
+        console.log('Кнопка рестарта привязана');
+    } else {
+        console.error('Кнопка restartBtn не найдена!');
     }
     
     // Telegram buttons
     const shareBtn = document.getElementById('tgShareBtn');
-    if (shareBtn) shareBtn.addEventListener('click', shareGameTelegram);
+    if (shareBtn) {
+        shareBtn.addEventListener('click', shareGameTelegram);
+        console.log('Кнопка поделиться привязана');
+    }
     
     const channelBtn = document.getElementById('tgChannelBtn');
-    if (channelBtn) channelBtn.addEventListener('click', openTelegramChannel);
+    if (channelBtn) {
+        channelBtn.addEventListener('click', openTelegramChannel);
+        console.log('Кнопка канала привязана');
+    }
     
     // Инициализация
     highScore = parseInt(localStorage.getItem('goatHighScore')) || 0;
+    console.log('Рекорд:', highScore);
     
     if (isTelegram && telegramUser) {
         const userId = telegramUser.id;
         const telegramBestScore = localStorage.getItem(`tg_${userId}_best_score`) || 0;
-        document.getElementById('currentHighScore').textContent = telegramBestScore;
+        const currentHighScoreElement = document.getElementById('currentHighScore');
+        if (currentHighScoreElement) currentHighScoreElement.textContent = telegramBestScore;
+        console.log('Telegram рекорд:', telegramBestScore);
     } else {
-        document.getElementById('currentHighScore').textContent = highScore;
+        const currentHighScoreElement = document.getElementById('currentHighScore');
+        if (currentHighScoreElement) currentHighScoreElement.textContent = highScore;
     }
     
     // Обновляем текст на стартовом экране
@@ -1153,14 +1334,36 @@ document.addEventListener('DOMContentLoaded', function() {
     if (instructions.length > 1) {
         instructions[0].textContent = 'Избегай какашек 💩';
         instructions[1].textContent = 'Собирай монетки ₽!';
+        console.log('Инструкции обновлены');
     }
     
-    resizeCanvas();
-    draw();
+    // Инициализируем canvas
+    setTimeout(() => {
+        resizeCanvas();
+        console.log('Canvas инициализирован');
+        
+        // Рисуем начальный экран
+        draw();
+        console.log('Начальный экран отрисован');
+        
+        // Тестовая отрисовка
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Игра загружена!', canvas.width / 2, canvas.height / 2);
+        ctx.font = '18px Arial';
+        ctx.fillText('Нажмите пробел или кликните для старта', canvas.width / 2, canvas.height / 2 + 40);
+    }, 100);
     
     if (isTelegram && tg && tg.MainButton) {
         tg.MainButton.show();
+        console.log('Telegram кнопка показана');
     }
+    
+    console.log('Игра инициализирована успешно!');
 });
 
 // Export functions for Telegram
