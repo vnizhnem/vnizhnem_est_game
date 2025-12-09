@@ -92,7 +92,7 @@ const POOP_IMG = new Image();
 const poopSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,20 C65,15 80,20 80,40 C80,60 65,75 50,80 C35,75 20,60 20,40 C20,20 35,15 50,20 Z" fill="#8B4513"/><ellipse cx="35" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="65" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#A0522D"/></svg>`;
 POOP_IMG.src = 'data:image/svg+xml;base64,' + safeBtoa(poopSVG);
 
-// ЛОГОТИП ПАРТНЕРА
+// ЛОГОТИП ПАРТНЕРА - ПОСТОЯННЫЙ В ПРАВОМ ВЕРХНЕМ УГЛУ
 const PARTNER_LOGO = new Image();
 PARTNER_LOGO.src = 'partner.png';
 PARTNER_LOGO.onload = function() {
@@ -144,15 +144,12 @@ let coinsCollectedWithoutHit = 0; // Монеток собрано без сто
 let comboTime = 0; // Время действия комбо
 
 // СИСТЕМА ЛОГОТИПА ПАРТНЕРА
-let partnerLogoVisible = false;
-let partnerLogoTimer = 0;
-const LOGO_SHOW_INTERVAL = 80; // Показывать каждые 80 очков
-const LOGO_SHOW_DURATION = 180; // Показывать 3 секунды (при 60 FPS)
-let lastLogoScore = 0;
-let partnerLogoAlpha = 0;
-let partnerLogoX = 0;
-let partnerLogoY = 0;
+let partnerLogoPulse = 0;
+let partnerLogoGlow = 0;
 let partnerLogoFloat = 0;
+const PARTNER_LOGO_WIDTH = 70;
+const PARTNER_LOGO_HEIGHT = 75;
+const PARTNER_LOGO_MARGIN = 15;
 
 // Сложность игры
 let gameDifficulty = {
@@ -239,54 +236,6 @@ function resizeCanvas() {
 }
 
 window.addEventListener('resize', resizeCanvas);
-
-// ====================
-// СИСТЕМА ЛОГОТИПА ПАРТНЕРА
-// ====================
-
-function updatePartnerLogo() {
-    if (!gameStarted || gameOver) return;
-    
-    // Проверяем, пора ли показать лого
-    if (!partnerLogoVisible && score - lastLogoScore >= LOGO_SHOW_INTERVAL) {
-        partnerLogoVisible = true;
-        partnerLogoTimer = LOGO_SHOW_DURATION;
-        lastLogoScore = score;
-        
-        // Случайная позиция для лого
-        partnerLogoX = Math.random() * (canvas.width - 100) + 50;
-        partnerLogoY = Math.random() * (canvas.height - 200) + 100;
-        partnerLogoFloat = Math.random() * Math.PI * 2;
-        
-        console.log('Показать лого партнера на', partnerLogoX, partnerLogoY);
-    }
-    
-    // Обновляем таймер и прозрачность
-    if (partnerLogoVisible) {
-        partnerLogoTimer--;
-        partnerLogoFloat += 0.02;
-        
-        // Плавное появление и исчезновение
-        if (partnerLogoTimer > LOGO_SHOW_DURATION - 30) {
-            // Появление
-            partnerLogoAlpha = Math.min(1, partnerLogoAlpha + 0.05);
-        } else if (partnerLogoTimer < 30) {
-            // Исчезновение
-            partnerLogoAlpha = Math.max(0, partnerLogoAlpha - 0.05);
-        } else {
-            // Полная видимость
-            partnerLogoAlpha = 0.25; // 25% прозрачность
-        }
-        
-        // Случайное движение
-        partnerLogoY += Math.sin(partnerLogoFloat) * 0.5;
-        
-        if (partnerLogoTimer <= 0) {
-            partnerLogoVisible = false;
-            partnerLogoAlpha = 0;
-        }
-    }
-}
 
 // ====================
 // БАЛАНСНЫЕ ФУНКЦИИ
@@ -607,12 +556,6 @@ function startGame() {
     resetCombo();
     defense = 0;
     
-    // Сброс логотипа партнера
-    partnerLogoVisible = false;
-    partnerLogoTimer = 0;
-    lastLogoScore = 0;
-    partnerLogoAlpha = 0;
-    
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
     
@@ -658,12 +601,6 @@ function resetGame() {
     hitsToLoseLife = getHitsToLoseLife();
     resetCombo();
     defense = 0;
-    
-    // Сброс логотипа партнера
-    partnerLogoVisible = false;
-    partnerLogoTimer = 0;
-    lastLogoScore = 0;
-    partnerLogoAlpha = 0;
     
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
@@ -756,7 +693,11 @@ function update() {
     updateLevel();
     updateLives();
     updateComboSystem();
-    updatePartnerLogo(); // Обновляем логотип партнера
+    
+    // Обновляем анимацию логотипа партнера
+    partnerLogoPulse += 0.03;
+    partnerLogoGlow += 0.05;
+    partnerLogoFloat += 0.02;
     
     if (levelUpEffect > 0) levelUpEffect--;
     if (lifeGainEffect > 0) lifeGainEffect--;
@@ -987,40 +928,68 @@ function draw() {
     }
     
     // ====================
-    // ЛОГОТИП ПАРТНЕРА НА ФОНЕ
+    // ЛОГОТИП ПАРТНЕРА - ПОСТОЯННЫЙ В ПРАВОМ ВЕРХНЕМ УГЛУ
     // ====================
-    if (partnerLogoVisible && PARTNER_LOGO.complete && partnerLogoAlpha > 0) {
+    if (PARTNER_LOGO.complete && gameStarted && !gameOver) {
+        const logoX = canvas.width - PARTNER_LOGO_WIDTH - PARTNER_LOGO_MARGIN;
+        const logoY = PARTNER_LOGO_MARGIN;
+        const floatOffset = Math.sin(partnerLogoFloat) * 2;
+        
+        // Эффекты для логотипа
+        const pulse = Math.sin(partnerLogoPulse) * 0.1 + 0.9; // Пульсация 90-100%
+        const glow = Math.sin(partnerLogoGlow) * 0.2 + 0.8; // Свечение 60-100%
+        
+        // Эффект мягкого свечения (периодический)
+        if (Math.sin(partnerLogoGlow * 0.7) > 0.5) {
+            ctx.save();
+            ctx.globalAlpha = 0.15 * glow;
+            ctx.shadowColor = '#4A90E2';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.drawImage(
+                PARTNER_LOGO,
+                logoX - 3,
+                logoY - 3 + floatOffset,
+                PARTNER_LOGO_WIDTH + 6,
+                PARTNER_LOGO_HEIGHT + 6
+            );
+            ctx.restore();
+        }
+        
+        // Основное изображение логотипа с пульсацией
         ctx.save();
-        ctx.globalAlpha = partnerLogoAlpha;
-        
-        // Плавающий эффект
-        const floatOffset = Math.sin(partnerLogoFloat) * 3;
-        
-        // Рисуем логотип
+        ctx.globalAlpha = 0.85; // Легкая прозрачность
         ctx.drawImage(
             PARTNER_LOGO,
-            partnerLogoX,
-            partnerLogoY + floatOffset,
-            70, // Ширина из вашего файла
-            75  // Высота из вашего файла
+            logoX,
+            logoY + floatOffset,
+            PARTNER_LOGO_WIDTH * pulse,
+            PARTNER_LOGO_HEIGHT * pulse
         );
         
-        // Легкая тень для объема
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        
+        // Тонкая обводка для выделения
+        if (Math.sin(partnerLogoPulse * 1.5) > 0) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                logoX - 2,
+                logoY + floatOffset - 2,
+                PARTNER_LOGO_WIDTH * pulse + 4,
+                PARTNER_LOGO_HEIGHT * pulse + 4
+            );
+        }
         ctx.restore();
         
-        // Индикатор партнера (опционально)
-        if (partnerLogoTimer > LOGO_SHOW_DURATION - 30) {
+        // Индикатор "Партнер" (появляется периодически)
+        if (Math.sin(partnerLogoPulse * 0.8) > 0.7) {
             ctx.save();
-            ctx.globalAlpha = partnerLogoAlpha * 0.7;
-            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
-            ctx.font = 'bold 16px Arial';
+            ctx.globalAlpha = 0.6;
+            ctx.fillStyle = 'rgba(74, 144, 226, 0.8)';
+            ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('Партнер', partnerLogoX + 35, partnerLogoY - 10);
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('партнер', logoX + PARTNER_LOGO_WIDTH/2, logoY - 5 + floatOffset);
             ctx.restore();
         }
     }
