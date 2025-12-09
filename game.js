@@ -63,7 +63,7 @@ GROUND_IMG.onerror = function() {
     this.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 60"><defs><pattern id="grassPattern" width="50" height="60" patternUnits="userSpaceOnUse"><rect width="50" height="60" fill="#228B22"/><rect y="40" width="50" height="20" fill="#32CD32"/><circle cx="10" cy="45" r="3" fill="#228B22"/><circle cx="30" cy="48" r="2" fill="#228B22"/><circle cx="40" cy="46" r="4" fill="#228B22"/></pattern></defs><rect width="800" height="60" fill="url(#grassPattern)"/><rect y="55" width="800" height="5" fill="#1a5c1a"/></svg>`);
 };
 
-// МОНЕТКИ с РУБЛЯМИ ₽
+// МОНЕТКИ вместо пельменей
 const COIN_IMG = new Image();
 COIN_IMG.src = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#FFD700"/><circle cx="50" cy="50" r="40" fill="#FFA500"/><circle cx="50" cy="50" r="30" fill="#FFD700"/><text x="50" y="55" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="30" fill="#8B4513">₽</text></svg>`);
 
@@ -140,7 +140,7 @@ const BENCH = {
     maxY: gameDifficulty.pipeMaxY
 };
 
-// МОНЕТКИ с рублями
+// МОНЕТКИ
 const COIN = {
     width: 35,
     height: 35,
@@ -172,7 +172,7 @@ const coins = [];
 const poops = [];
 
 // ====================
-// БАЛАНСНЫЕ ФУНКЦИИ (ИСПРАВЛЕННЫЕ)
+// БАЛАНСНЫЕ ФУНКЦИИ
 // ====================
 
 function getCurrentSpeed() {
@@ -198,20 +198,16 @@ function getCoinPoints() {
 
 function getPoopPoints() {
     // БАЛАНС: урон растет медленнее и имеет защиту
-    const baseDamage = POOP.basePoints; // -30
-    const levelMultiplier = 1 + (currentLevel - 1) * 0.08; // +8% за уровень
-    
-    // Учитываем, что baseDamage отрицательный
-    let damage = baseDamage * levelMultiplier;
+    const baseDamage = POOP.basePoints;
+    const levelMultiplier = 1 + (currentLevel - 1) * 0.08; // +8% за уровень вместо +50%
+    const damage = baseDamage * levelMultiplier;
     
     // Защита: каждый 3 уровень уменьшает урон на 10%
     const defenseBonus = Math.floor(currentLevel / 3) * 0.1;
+    const finalDamage = damage * (1 - defenseBonus);
     
-    // Применяем защиту (уменьшаем отрицательное значение)
-    damage = damage * (1 - defenseBonus);
-    
-    // Ограничиваем максимальный урон (damage отрицательное, поэтому Math.max)
-    return Math.max(POOP.maxDamage, Math.floor(damage));
+    // Ограничиваем максимальный урон
+    return Math.max(POOP.maxDamage, Math.floor(finalDamage));
 }
 
 function getHitsToLoseLife() {
@@ -239,7 +235,7 @@ function updateLevel() {
         nextLevelAt = 150 + (currentLevel - 1) * 120;
         levelUpEffect = 90;
         
-        // Награда за уровень: дополнительная жизнь каждые 3 уровень
+        // Награда за уровень: дополнительная жизнь каждые 3 уровня
         if (currentLevel % 3 === 0 && lives < maxLives) {
             lives++;
             lifeGainEffect = 60;
@@ -248,6 +244,8 @@ function updateLevel() {
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate([150, 80, 150, 80, 150]);
         }
+        
+        // Не спавним какашку при переходе уровня
     }
 }
 
@@ -675,7 +673,7 @@ function update() {
         }
     }
     
-    // МОНЕТКИ с рублями
+    // МОНЕТКИ
     for (let i = coins.length - 1; i >= 0; i--) {
         const coin = coins[i];
         coin.x -= currentSpeed;
@@ -733,9 +731,9 @@ function update() {
                 // Если есть очки - снимаем очки (с учетом защиты)
                 const basePointsLost = getPoopPoints();
                 const actualPointsLost = Math.floor(basePointsLost * (1 - defense));
-                score += actualPointsLost; // actualPointsLost отрицательный, поэтому score уменьшается
+                score += actualPointsLost;
                 if (score < 0) score = 0;
-                poop.effect = actualPointsLost.toString();
+                poop.effect = actualPointsLost;
                 
                 // Сбрасываем комбо при любом столкновении
                 resetCombo();
@@ -832,7 +830,7 @@ function draw() {
     // Рисуем фон
     ctx.drawImage(BG_IMG, 0, 0, canvas.width, canvas.height);
     
-    // МОНЕТКИ с рублями
+    // МОНЕТКИ
     coins.forEach(coin => {
         if (!coin.collected) {
             ctx.save();
@@ -1151,13 +1149,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Обновляем текст на стартовом экране
-    const startScreenText = document.getElementById('startScreen');
-    if (startScreenText) {
-        const instructions = startScreenText.querySelectorAll('p');
-        if (instructions.length >= 2) {
-            instructions[0].textContent = 'Избегай какашек 💩';
-            instructions[1].textContent = 'Собирай монетки ₽!';
-        }
+    const instructions = document.querySelectorAll('.instruction');
+    if (instructions.length > 1) {
+        instructions[0].textContent = 'Избегай какашек 💩';
+        instructions[1].textContent = 'Собирай монетки ₽!';
     }
     
     resizeCanvas();
