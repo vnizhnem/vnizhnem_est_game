@@ -172,7 +172,7 @@ const coins = [];
 const poops = [];
 
 // ====================
-// БАЛАНСНЫЕ ФУНКЦИИ
+// БАЛАНСНЫЕ ФУНКЦИИ (ИСПРАВЛЕННЫЕ)
 // ====================
 
 function getCurrentSpeed() {
@@ -198,16 +198,20 @@ function getCoinPoints() {
 
 function getPoopPoints() {
     // БАЛАНС: урон растет медленнее и имеет защиту
-    const baseDamage = POOP.basePoints;
-    const levelMultiplier = 1 + (currentLevel - 1) * 0.08; // +8% за уровень вместо +50%
-    const damage = baseDamage * levelMultiplier;
+    const baseDamage = POOP.basePoints; // -30
+    const levelMultiplier = 1 + (currentLevel - 1) * 0.08; // +8% за уровень
+    
+    // Учитываем, что baseDamage отрицательный
+    let damage = baseDamage * levelMultiplier;
     
     // Защита: каждый 3 уровень уменьшает урон на 10%
     const defenseBonus = Math.floor(currentLevel / 3) * 0.1;
-    const finalDamage = damage * (1 - defenseBonus);
     
-    // Ограничиваем максимальный урон
-    return Math.max(POOP.maxDamage, Math.floor(finalDamage));
+    // Применяем защиту (уменьшаем отрицательное значение)
+    damage = damage * (1 - defenseBonus);
+    
+    // Ограничиваем максимальный урон (damage отрицательное, поэтому Math.max)
+    return Math.max(POOP.maxDamage, Math.floor(damage));
 }
 
 function getHitsToLoseLife() {
@@ -244,8 +248,6 @@ function updateLevel() {
         if (isTelegram && navigator.vibrate) {
             navigator.vibrate([150, 80, 150, 80, 150]);
         }
-        
-        // Не спавним какашку при переходе уровня
     }
 }
 
@@ -731,9 +733,9 @@ function update() {
                 // Если есть очки - снимаем очки (с учетом защиты)
                 const basePointsLost = getPoopPoints();
                 const actualPointsLost = Math.floor(basePointsLost * (1 - defense));
-                score += actualPointsLost;
+                score += actualPointsLost; // actualPointsLost отрицательный, поэтому score уменьшается
                 if (score < 0) score = 0;
-                poop.effect = actualPointsLost;
+                poop.effect = actualPointsLost.toString();
                 
                 // Сбрасываем комбо при любом столкновении
                 resetCombo();
@@ -1148,20 +1150,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('currentHighScore').textContent = highScore;
     }
     
-    // Обновляем текст на стартовом экране (если есть элементы)
-    const instructions = document.querySelectorAll('.instruction');
-    if (instructions.length > 1) {
-        instructions[0].textContent = 'Избегай какашек 💩';
-        instructions[1].textContent = 'Собирай монетки ₽!';
-    }
-    
-    // Обновляем текст в HTML если есть
-    const coinTexts = document.querySelectorAll('.coin-text');
-    coinTexts.forEach(el => {
-        if (el.textContent.includes('$') || el.textContent.includes('пельмен')) {
-            el.textContent = el.textContent.replace('$', '₽').replace('пельмени', 'монетки');
+    // Обновляем текст на стартовом экране
+    const startScreenText = document.getElementById('startScreen');
+    if (startScreenText) {
+        const instructions = startScreenText.querySelectorAll('p');
+        if (instructions.length >= 2) {
+            instructions[0].textContent = 'Избегай какашек 💩';
+            instructions[1].textContent = 'Собирай монетки ₽!';
         }
-    });
+    }
     
     resizeCanvas();
     draw();
