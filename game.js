@@ -23,7 +23,7 @@ if (isTelegram) {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// Функция для безопасного кодирования в Base64 (решает проблему с btoa)
+// Функция для безопасного кодирования в Base64
 function safeBtoa(str) {
     return btoa(unescape(encodeURIComponent(str)));
 }
@@ -57,10 +57,9 @@ GROUND_IMG.onerror = function() {
     this.src = 'data:image/svg+xml;base64,' + safeBtoa(svg);
 };
 
-// КРАСИВАЯ МОНЕТКА без текстовых символов
+// КРАСИВАЯ МОНЕТКА
 const COIN_IMG = new Image();
 const coinSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Внешний круг с градиентом -->
   <defs>
     <radialGradient id="coinGradient">
       <stop offset="0%" stop-color="#FFD700"/>
@@ -72,27 +71,17 @@ const coinSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     </radialGradient>
   </defs>
   
-  <!-- Внешний блестящий круг -->
   <circle cx="50" cy="50" r="45" fill="url(#coinGradient)" stroke="#FF8C00" stroke-width="2"/>
-  
-  <!-- Внутренний круг -->
   <circle cx="50" cy="50" r="35" fill="url(#coinInnerGradient)"/>
   
-  <!-- Звездочка/снежинка в центре (символ монетки) -->
   <g transform="translate(50, 50)" stroke="#8B4513" stroke-width="2" fill="#FFD700">
-    <!-- Крест -->
     <line x1="-10" y1="0" x2="10" y2="0"/>
     <line x1="0" y1="-10" x2="0" y2="10"/>
-    
-    <!-- Диагонали -->
     <line x1="-7" y1="-7" x2="7" y2="7"/>
     <line x1="7" y1="-7" x2="-7" y2="7"/>
-    
-    <!-- Точка в центре -->
     <circle cx="0" cy="0" r="3" fill="#8B4513"/>
   </g>
   
-  <!-- Блики -->
   <circle cx="65" cy="35" r="8" fill="white" opacity="0.3"/>
   <circle cx="30" cy="40" r="5" fill="white" opacity="0.2"/>
 </svg>`;
@@ -102,6 +91,23 @@ COIN_IMG.src = 'data:image/svg+xml;base64,' + safeBtoa(coinSVG);
 const POOP_IMG = new Image();
 const poopSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,20 C65,15 80,20 80,40 C80,60 65,75 50,80 C35,75 20,60 20,40 C20,20 35,15 50,20 Z" fill="#8B4513"/><ellipse cx="35" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="65" cy="45" rx="15" ry="10" fill="#A0522D"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="#A0522D"/></svg>`;
 POOP_IMG.src = 'data:image/svg+xml;base64,' + safeBtoa(poopSVG);
+
+// ЛОГОТИП ПАРТНЕРА
+const PARTNER_LOGO = new Image();
+PARTNER_LOGO.src = 'partner.png';
+PARTNER_LOGO.onload = function() {
+    console.log('Логотип партнера загружен');
+};
+PARTNER_LOGO.onerror = function() {
+    console.log('Используется запасной логотип партнера');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="70" height="75" viewBox="0 0 70 75">
+        <rect x="5" y="5" width="60" height="65" rx="10" fill="#4A90E2" opacity="0.8"/>
+        <rect x="10" y="10" width="50" height="55" rx="8" fill="#FFFFFF" opacity="0.9"/>
+        <text x="35" y="35" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="14" fill="#4A90E2">ПАРТНЕР</text>
+        <text x="35" y="55" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">game</text>
+    </svg>`;
+    this.src = 'data:image/svg+xml;base64,' + safeBtoa(svg);
+};
 
 // ====================
 // ИГРОВЫЕ ПЕРЕМЕННЫЕ
@@ -136,6 +142,17 @@ let defense = 0; // % защиты от урона (0-50%)
 let comboMultiplier = 1.0; // Множитель за комбо
 let coinsCollectedWithoutHit = 0; // Монеток собрано без столкновения
 let comboTime = 0; // Время действия комбо
+
+// СИСТЕМА ЛОГОТИПА ПАРТНЕРА
+let partnerLogoVisible = false;
+let partnerLogoTimer = 0;
+const LOGO_SHOW_INTERVAL = 80; // Показывать каждые 80 очков
+const LOGO_SHOW_DURATION = 180; // Показывать 3 секунды (при 60 FPS)
+let lastLogoScore = 0;
+let partnerLogoAlpha = 0;
+let partnerLogoX = 0;
+let partnerLogoY = 0;
+let partnerLogoFloat = 0;
 
 // Сложность игры
 let gameDifficulty = {
@@ -190,7 +207,7 @@ const POOP = {
     maxDamage: -50 // Максимальный урон
 };
 
-// Земля - ДОЛЖНА БЫТЬ ОБЪЯВЛЕНА ДО ФУНКЦИИ resizeCanvas!
+// Земля
 const ground = {
     x: 0,
     y: 540,
@@ -222,6 +239,54 @@ function resizeCanvas() {
 }
 
 window.addEventListener('resize', resizeCanvas);
+
+// ====================
+// СИСТЕМА ЛОГОТИПА ПАРТНЕРА
+// ====================
+
+function updatePartnerLogo() {
+    if (!gameStarted || gameOver) return;
+    
+    // Проверяем, пора ли показать лого
+    if (!partnerLogoVisible && score - lastLogoScore >= LOGO_SHOW_INTERVAL) {
+        partnerLogoVisible = true;
+        partnerLogoTimer = LOGO_SHOW_DURATION;
+        lastLogoScore = score;
+        
+        // Случайная позиция для лого
+        partnerLogoX = Math.random() * (canvas.width - 100) + 50;
+        partnerLogoY = Math.random() * (canvas.height - 200) + 100;
+        partnerLogoFloat = Math.random() * Math.PI * 2;
+        
+        console.log('Показать лого партнера на', partnerLogoX, partnerLogoY);
+    }
+    
+    // Обновляем таймер и прозрачность
+    if (partnerLogoVisible) {
+        partnerLogoTimer--;
+        partnerLogoFloat += 0.02;
+        
+        // Плавное появление и исчезновение
+        if (partnerLogoTimer > LOGO_SHOW_DURATION - 30) {
+            // Появление
+            partnerLogoAlpha = Math.min(1, partnerLogoAlpha + 0.05);
+        } else if (partnerLogoTimer < 30) {
+            // Исчезновение
+            partnerLogoAlpha = Math.max(0, partnerLogoAlpha - 0.05);
+        } else {
+            // Полная видимость
+            partnerLogoAlpha = 0.25; // 25% прозрачность
+        }
+        
+        // Случайное движение
+        partnerLogoY += Math.sin(partnerLogoFloat) * 0.5;
+        
+        if (partnerLogoTimer <= 0) {
+            partnerLogoVisible = false;
+            partnerLogoAlpha = 0;
+        }
+    }
+}
 
 // ====================
 // БАЛАНСНЫЕ ФУНКЦИИ
@@ -470,10 +535,7 @@ function openTelegramChannel() {
 // ====================
 
 function handleJump() {
-    console.log('Прыжок! gameStarted:', gameStarted, 'gameOver:', gameOver);
-    
     if (!gameStarted) {
-        console.log('Запуск игры...');
         startGame();
     } else if (!gameOver) {
         if (isStartingArc) {
@@ -487,14 +549,11 @@ function handleJump() {
             navigator.vibrate(50);
         }
     } else {
-        console.log('Перезапуск игры...');
         resetGame();
     }
 }
 
 function handleGameClick(e) {
-    console.log('Клик по игре');
-    
     if (e.target.closest('.telegram-button') || e.target.closest('.telegram-footer') ||
         e.target.closest('.tg-share-button') || e.target.closest('.tg-channel-button') ||
         e.target.id === 'startBtn' || e.target.id === 'restartBtn' ||
@@ -529,8 +588,6 @@ document.addEventListener('keydown', function(e) {
 // ====================
 
 function startGame() {
-    console.log('=== START GAME ===');
-    
     gameStarted = true;
     gameOver = false;
     score = 0;
@@ -550,6 +607,12 @@ function startGame() {
     resetCombo();
     defense = 0;
     
+    // Сброс логотипа партнера
+    partnerLogoVisible = false;
+    partnerLogoTimer = 0;
+    lastLogoScore = 0;
+    partnerLogoAlpha = 0;
+    
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
     
@@ -564,16 +627,9 @@ function startGame() {
     
     frames = 0;
     
-    // Обновляем интерфейс
-    const scoreElement = document.getElementById('score');
-    const startScreen = document.getElementById('startScreen');
-    const gameOverScreen = document.getElementById('gameOverScreen');
-    
-    if (scoreElement) scoreElement.textContent = '0';
-    if (startScreen) startScreen.style.display = 'none';
-    if (gameOverScreen) gameOverScreen.style.display = 'none';
-    
-    console.log('Интерфейс обновлен');
+    document.getElementById('score').textContent = '0';
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
     
     resizeCanvas();
     
@@ -581,13 +637,10 @@ function startGame() {
         tg.MainButton.show();
     }
     
-    console.log('Запуск игрового цикла...');
     gameLoop();
 }
 
 function resetGame() {
-    console.log('=== RESET GAME ===');
-    
     gameOver = false;
     gameStarted = false;
     score = 0;
@@ -606,6 +659,12 @@ function resetGame() {
     resetCombo();
     defense = 0;
     
+    // Сброс логотипа партнера
+    partnerLogoVisible = false;
+    partnerLogoTimer = 0;
+    lastLogoScore = 0;
+    partnerLogoAlpha = 0;
+    
     goat.gravity = gameDifficulty.gravity;
     goat.jumpStrength = isTelegram ? -9 : -8;
     
@@ -619,26 +678,18 @@ function resetGame() {
     
     resizeCanvas();
     
-    // Обновляем интерфейс
-    const gameOverScreen = document.getElementById('gameOverScreen');
-    const startScreen = document.getElementById('startScreen');
-    const scoreElement = document.getElementById('score');
-    const currentHighScoreElement = document.getElementById('currentHighScore');
-    
-    if (gameOverScreen) gameOverScreen.style.display = 'none';
-    if (startScreen) startScreen.style.display = 'flex';
-    if (scoreElement) scoreElement.textContent = '0';
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+    document.getElementById('score').textContent = '0';
     
     if (isTelegram && telegramUser) {
         const userId = telegramUser.id;
         const storageKey = `tg_${userId}_best_score`;
         const telegramBestScore = localStorage.getItem(storageKey) || 0;
-        if (currentHighScoreElement) currentHighScoreElement.textContent = telegramBestScore;
+        document.getElementById('currentHighScore').textContent = telegramBestScore;
     } else {
-        if (currentHighScoreElement) currentHighScoreElement.textContent = highScore;
+        document.getElementById('currentHighScore').textContent = highScore;
     }
-    
-    console.log('Игра сброшена');
 }
 
 function addBench() {
@@ -705,6 +756,7 @@ function update() {
     updateLevel();
     updateLives();
     updateComboSystem();
+    updatePartnerLogo(); // Обновляем логотип партнера
     
     if (levelUpEffect > 0) levelUpEffect--;
     if (lifeGainEffect > 0) lifeGainEffect--;
@@ -734,8 +786,7 @@ function update() {
         if (!bench.passed && bench.x + bench.width < goat.x) {
             bench.passed = true;
             score += 5;
-            const scoreElement = document.getElementById('score');
-            if (scoreElement) scoreElement.textContent = score;
+            document.getElementById('score').textContent = score;
             
             if (benches.length < 3) addBench();
         }
@@ -770,8 +821,7 @@ function update() {
             coin.effect = '+' + points;
             coin.effectTime = frames;
             
-            const scoreElement = document.getElementById('score');
-            if (scoreElement) scoreElement.textContent = score;
+            document.getElementById('score').textContent = score;
             
             // Добавляем комбо
             addCombo();
@@ -834,8 +884,7 @@ function update() {
             goat.velocity = -7; // Меньше отталкивание
             
             // ОБНОВЛЯЕМ СЧЕТ
-            const scoreElement = document.getElementById('score');
-            if (scoreElement) scoreElement.textContent = score;
+            document.getElementById('score').textContent = score;
             
             if (isTelegram && navigator.vibrate) {
                 navigator.vibrate([80, 40, 80]);
@@ -874,8 +923,6 @@ function update() {
 }
 
 function endGame(reason = "ИГРА ОКОНЧЕНА!") {
-    console.log('=== END GAME ===', reason);
-    
     gameOver = true;
     
     if (score > highScore) {
@@ -885,22 +932,12 @@ function endGame(reason = "ИГРА ОКОНЧЕНА!") {
     
     if (isTelegram && telegramUser) saveScoreToTelegram(score);
     
-    const finalScoreElement = document.getElementById('finalScore');
-    const highScoreElement = document.getElementById('highScore');
-    const gameOverScreen = document.getElementById('gameOverScreen');
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('highScore').textContent = Math.max(highScore, 
+        isTelegram && telegramUser ? localStorage.getItem(`tg_${telegramUser.id}_best_score`) || 0 : highScore
+    );
     
-    if (finalScoreElement) finalScoreElement.textContent = score;
-    
-    let displayHighScore = highScore;
-    if (isTelegram && telegramUser) {
-        const userId = telegramUser.id;
-        const storageKey = `tg_${userId}_best_score`;
-        const telegramBestScore = localStorage.getItem(storageKey) || 0;
-        displayHighScore = Math.max(highScore, telegramBestScore);
-    }
-    
-    if (highScoreElement) highScoreElement.textContent = displayHighScore;
-    if (gameOverScreen) gameOverScreen.style.display = 'flex';
+    document.getElementById('gameOverScreen').style.display = 'flex';
     
     if (isTelegram && navigator.vibrate) {
         navigator.vibrate([300, 100, 300]);
@@ -947,6 +984,45 @@ function draw() {
         // Запасной фон если изображение не загружено
         ctx.fillStyle = '#87CEEB';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // ====================
+    // ЛОГОТИП ПАРТНЕРА НА ФОНЕ
+    // ====================
+    if (partnerLogoVisible && PARTNER_LOGO.complete && partnerLogoAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = partnerLogoAlpha;
+        
+        // Плавающий эффект
+        const floatOffset = Math.sin(partnerLogoFloat) * 3;
+        
+        // Рисуем логотип
+        ctx.drawImage(
+            PARTNER_LOGO,
+            partnerLogoX,
+            partnerLogoY + floatOffset,
+            70, // Ширина из вашего файла
+            75  // Высота из вашего файла
+        );
+        
+        // Легкая тень для объема
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        
+        ctx.restore();
+        
+        // Индикатор партнера (опционально)
+        if (partnerLogoTimer > LOGO_SHOW_DURATION - 30) {
+            ctx.save();
+            ctx.globalAlpha = partnerLogoAlpha * 0.7;
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Партнер', partnerLogoX + 35, partnerLogoY - 10);
+            ctx.restore();
+        }
     }
     
     // МОНЕТКИ
